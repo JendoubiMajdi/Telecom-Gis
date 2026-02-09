@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import styles from './Dashboard.module.css';
 
 const Dashboard: React.FC = () => {
-  const { user, logout, isLoading } = useAuth();
+  const { user, isLoading } = useAuth(); // Remove logout from here
 
   const getRoleBadgeClass = (role: string) => {
     switch (role) {
@@ -40,20 +40,8 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className={styles.container}>
-      {/* Header */}
-      <header className={styles.header}>
-        <div className={styles.headerLeft}>
-          <h1>Telecom GIS Platform</h1>
-          <p>Infrastructure Mapping System - Cameroon</p>
-        </div>
-        <button 
-          onClick={logout} 
-          className={styles.logoutButton}
-        >
-          Logout
-        </button>
-      </header>
-
+      {/* REMOVED THE HEADER SECTION - Now using global Navbar */}
+      
       {/* Main Content */}
       <main className={styles.mainContent}>
         {/* Welcome Section */}

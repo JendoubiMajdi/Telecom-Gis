@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import styles from './Register.module.css';
@@ -11,12 +11,16 @@ const Register: React.FC = () => {
     fullName: '',
     role: 'viewer' as 'admin' | 'operator' | 'viewer'
   });
+  
+  const [profilePicture, setProfilePicture] = useState<string | null>(null);
+  const [profilePictureFile, setProfilePictureFile] = useState<File | null>(null);
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   
   const { register, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -30,6 +34,39 @@ const Register: React.FC = () => {
       ...prev,
       [name]: value
     }));
+  };
+
+  const handleProfilePictureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setError('Please upload an image file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Image size should be less than 5MB');
+      return;
+    }
+
+    setProfilePictureFile(file);
+    
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setProfilePicture(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemovePicture = () => {
+    setProfilePicture(null);
+    setProfilePictureFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -56,11 +93,36 @@ const Register: React.FC = () => {
         formData.fullName,
         formData.role
       );
+
+      // Immediately save profile picture to localStorage
+      if (profilePicture) {
+        // Wait a moment for localStorage to be updated
+        setTimeout(() => {
+          const userStr = localStorage.getItem('user');
+          const token = localStorage.getItem('token');
+          
+          if (userStr && token) {
+            try {
+              const user = JSON.parse(userStr);
+              localStorage.setItem(`profile_picture_${user.id}`, profilePicture);
+              console.log('✅ Profile picture saved for user ID:', user.id);
+              
+              // Force Navbar to reload profile picture
+              window.dispatchEvent(new Event('storage'));
+            } catch (err) {
+              console.error('❌ Error saving profile picture:', err);
+            }
+          } else {
+            console.error('❌ User or token not found in localStorage');
+          }
+        }, 100);
+      }
+
       setSuccess('Registration successful! Redirecting to dashboard...');
       
       setTimeout(() => {
         navigate('/dashboard');
-      }, 2000);
+      }, 1500);
       
     } catch (err: any) {
       setError(err.response?.data?.error || 'Registration failed. Please try again.');
@@ -88,8 +150,55 @@ const Register: React.FC = () => {
         )}
 
         <form onSubmit={handleSubmit} className={styles.form}>
+          {/* Profile Picture Section */}
+          <div className={styles.profilePictureSection}>
+            <div className={styles.profilePictureContainer}>
+              {profilePicture ? (
+                <img 
+                  src={profilePicture} 
+                  alt="Profile preview" 
+                  className={styles.profilePicturePreview}
+                />
+              ) : (
+                <div className={styles.profilePlaceholder}>
+                  <span className={styles.placeholderIcon}>👤</span>
+                  <span className={styles.placeholderText}>Add Photo</span>
+                </div>
+              )}
+            </div>
+            
+            <div className={styles.pictureControls}>
+              <label className={styles.uploadButton}>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleProfilePictureChange}
+                  className={styles.fileInput}
+                  disabled={loading}
+                />
+                Choose Photo
+              </label>
+              
+              {profilePicture && (
+                <button 
+                  type="button" 
+                  onClick={handleRemovePicture}
+                  className={styles.removeButton}
+                  disabled={loading}
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+            
+            <p className={styles.pictureHint}>
+              Optional: Square image, max 5MB
+            </p>
+          </div>
+
           <div className={styles.formGroup}>
-            <label htmlFor="fullName" className={styles.label}>Full Name</label>
+            <label htmlFor="fullName" className={styles.label}>Full Name *</label>
             <input
               type="text"
               id="fullName"
@@ -104,7 +213,7 @@ const Register: React.FC = () => {
           </div>
 
           <div className={styles.formGroup}>
-            <label htmlFor="email" className={styles.label}>Email</label>
+            <label htmlFor="email" className={styles.label}>Email *</label>
             <input
               type="email"
               id="email"
@@ -119,7 +228,7 @@ const Register: React.FC = () => {
           </div>
 
           <div className={styles.formGroup}>
-            <label htmlFor="password" className={styles.label}>Password</label>
+            <label htmlFor="password" className={styles.label}>Password *</label>
             <input
               type="password"
               id="password"
@@ -134,7 +243,7 @@ const Register: React.FC = () => {
           </div>
 
           <div className={styles.formGroup}>
-            <label htmlFor="confirmPassword" className={styles.label}>Confirm Password</label>
+            <label htmlFor="confirmPassword" className={styles.label}>Confirm Password *</label>
             <input
               type="password"
               id="confirmPassword"

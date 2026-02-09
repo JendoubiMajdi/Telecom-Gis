@@ -1,10 +1,12 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
-import PrivateRoute from './components/PrivateRoute'; // ADD THIS
+import Navbar from './components/Navbar';
+import PrivateRoute from './components/PrivateRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import Profile from './pages/Profile';
 import './App.css';
 
 const App: React.FC = () => {
@@ -13,19 +15,31 @@ const App: React.FC = () => {
       <AuthProvider>
         <div className="App">
           <Routes>
-            {/* Redirect root to login */}
-            <Route path="/" element={<Navigate to="/login" replace />} />
-            
-            {/* Public routes */}
+            {/* Public routes - No Navbar */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             
-            {/* Protected route - NOW USING PrivateRoute */}
+            {/* Protected routes - With Navbar */}
             <Route path="/dashboard" element={
               <PrivateRoute>
-                <Dashboard />
+                <>
+                  <Navbar />
+                  <Dashboard />
+                </>
               </PrivateRoute>
             } />
+            
+            <Route path="/profile" element={
+              <PrivateRoute>
+                <>
+                  <Navbar />
+                  <Profile />
+                </>
+              </PrivateRoute>
+            } />
+            
+            {/* Redirect root to login */}
+            <Route path="/" element={<Navigate to="/login" replace />} />
             
             {/* 404 route */}
             <Route path="*" element={

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import authService, { User } from '../services/auth.service';
+import authService, { User, UpdateProfileData } from '../services/auth.service';
 
 interface AuthContextType {
   user: User | null;
@@ -7,6 +7,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, fullName: string, role: string) => Promise<void>;
+  updateProfile: (data: UpdateProfileData) => Promise<{ message: string; user: User }>; // Add this
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -80,6 +81,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  // Add the updateProfile function
+  const updateProfile = async (data: UpdateProfileData) => {
+    try {
+      const response = await authService.updateProfile(data);
+      setUser(response.user);
+      
+      // Update localStorage with new user data
+      localStorage.setItem('user', JSON.stringify(response.user));
+      
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  };
+
   const logout = () => {
     authService.logout();
     setUser(null);
@@ -92,6 +108,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isLoading,
     login,
     register,
+    updateProfile, // Add this to the context value
     logout,
     isAuthenticated: !!token,
   };

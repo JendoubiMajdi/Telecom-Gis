@@ -40,10 +40,21 @@ export interface RegisterData extends LoginData {
   role?: 'admin' | 'operator' | 'viewer';
 }
 
+export interface UpdateProfileData {
+  fullName?: string;
+  currentPassword?: string;
+  newPassword?: string;
+}
+
 export interface AuthResponse {
   message: string;
   user: User;
   token: string;
+}
+
+export interface UpdateProfileResponse {
+  message: string;
+  user: User;
 }
 
 export const authService = {
@@ -68,6 +79,17 @@ export const authService = {
   getCurrentUser: async (): Promise<User> => {
     const response = await api.get<{ user: User }>(`${API_URL}/me`);
     return response.data.user;
+  },
+
+  updateProfile: async (profileData: UpdateProfileData): Promise<UpdateProfileResponse> => {
+    const response = await api.put<UpdateProfileResponse>(`${API_URL}/profile`, profileData);
+    
+    // Update localStorage with new user data
+    if (response.data.user) {
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+    }
+    
+    return response.data;
   },
 
   logout: (): void => {

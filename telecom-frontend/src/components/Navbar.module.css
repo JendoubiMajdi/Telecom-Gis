@@ -1,0 +1,342 @@
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 30px;
+  height: 70px;
+  background-color: white;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.navLeft {
+  display: flex;
+  align-items: center;
+  gap: 40px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: #2c3e50;
+  font-weight: 700;
+  font-size: 22px;
+}
+
+.logo:hover {
+  opacity: 0.9;
+}
+
+.logoIcon {
+  font-size: 24px;
+}
+
+.logoText {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.navLinks {
+  display: flex;
+  gap: 25px;
+}
+
+.navLink {
+  color: #5d6d7e;
+  text-decoration: none;
+  font-size: 16px;
+  font-weight: 500;
+  padding: 8px 0;
+  position: relative;
+  transition: color 0.2s;
+}
+
+.navLink:hover {
+  color: #4a6bdf;
+}
+
+.navLink::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background-color: #4a6bdf;
+  transition: width 0.3s;
+}
+
+.navLink:hover::after {
+  width: 100%;
+}
+
+.navRight {
+  display: flex;
+  align-items: center;
+}
+
+.loginButton {
+  background-color: #4a6bdf;
+  color: white;
+  text-decoration: none;
+  padding: 10px 24px;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.loginButton:hover {
+  background-color: #3a5bd0;
+}
+
+.userMenu {
+  position: relative;
+}
+
+.userButton {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 8px;
+  transition: background-color 0.2s;
+}
+
+.userButton:hover {
+  background-color: #f8f9fa;
+}
+
+.profilePicture {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #e0e0e0;
+}
+
+.profileInitial {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  font-size: 18px;
+  border: 2px solid #e0e0e0;
+}
+
+.userName {
+  color: #2c3e50;
+  font-weight: 500;
+  font-size: 16px;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dropdownArrow {
+  font-size: 12px;
+  color: #7f8c8d;
+  transition: transform 0.2s;
+}
+
+.arrowUp {
+  transform: rotate(180deg);
+}
+
+.arrowDown {
+  transform: rotate(0deg);
+}
+
+.dropdownMenu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 320px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+  padding: 20px 0;
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dropdownHeader {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 0 20px 20px;
+}
+
+.dropdownProfilePicture {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #e0e0e0;
+}
+
+.dropdownProfileInitial {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  font-size: 24px;
+  border: 3px solid #e0e0e0;
+}
+
+.dropdownUserInfo {
+  flex: 1;
+}
+
+.dropdownUserName {
+  color: #2c3e50;
+  font-weight: 600;
+  font-size: 16px;
+  margin-bottom: 4px;
+}
+
+.dropdownUserEmail {
+  color: #7f8c8d;
+  font-size: 14px;
+  margin-bottom: 6px;
+  word-break: break-all;
+}
+
+.dropdownUserRole {
+  color: #5d6d7e;
+  font-size: 13px;
+}
+
+.roleText {
+  font-weight: 600;
+  color: #3498db;
+  text-transform: capitalize;
+}
+
+.dropdownDivider {
+  height: 1px;
+  background-color: #eaeaea;
+  margin: 15px 0;
+}
+
+.dropdownItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 20px;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  color: #5d6d7e;
+  font-size: 15px;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.dropdownItem:hover {
+  background-color: #f8f9fa;
+  color: #4a6bdf;
+}
+
+.dropdownIcon {
+  font-size: 18px;
+  width: 24px;
+  text-align: center;
+}
+
+.themeToggle {
+  margin-left: auto;
+  width: 40px;
+  height: 20px;
+  background-color: #e0e0e0;
+  border-radius: 10px;
+  position: relative;
+  transition: background-color 0.2s;
+}
+
+.toggleSwitch {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  background-color: white;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+
+.logoutItem {
+  color: #e74c3c;
+}
+
+.logoutItem:hover {
+  color: #c0392b;
+  background-color: #fdf2f2;
+}
+
+.loadingText {
+  color: #7f8c8d;
+  font-size: 14px;
+  padding: 8px 16px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .navbar {
+    padding: 0 15px;
+    height: 60px;
+  }
+  
+  .navLeft {
+    gap: 20px;
+  }
+  
+  .logoText {
+    display: none;
+  }
+  
+  .navLinks {
+    display: none;
+  }
+  
+  .userName {
+    display: none;
+  }
+  
+  .dropdownMenu {
+    width: 280px;
+    right: -10px;
+  }
+}

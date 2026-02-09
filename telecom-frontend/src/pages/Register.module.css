@@ -1,33 +1,55 @@
 .container {
+  min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;
-  background-color: #f5f5f5;
+  background-color: #f5f7fa;
   padding: 20px;
 }
 
 .card {
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
   padding: 40px;
   width: 100%;
-  max-width: 400px;
+  max-width: 480px;
 }
 
 .title {
   color: #2c3e50;
   text-align: center;
-  margin-bottom: 10px;
-  font-size: 24px;
+  margin: 0 0 10px;
+  font-size: 28px;
+  font-weight: 700;
 }
 
 .subtitle {
   color: #7f8c8d;
   text-align: center;
-  margin-bottom: 30px;
+  margin: 0 0 30px;
   font-size: 18px;
+  font-weight: 500;
+}
+
+.errorAlert {
+  background-color: #fdf2f2;
+  color: #c53030;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  border: 1px solid #fc8181;
+  font-size: 14px;
+}
+
+.successAlert {
+  background-color: #f0fff4;
+  color: #2f855a;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  border: 1px solid #9ae6b4;
+  font-size: 14px;
 }
 
 .form {
@@ -35,41 +57,162 @@
   flex-direction: column;
 }
 
+/* Profile Picture Section */
+.profilePictureSection {
+  text-align: center;
+  margin-bottom: 25px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #eaeaea;
+}
+
+.profilePictureContainer {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  overflow: hidden;
+  margin: 0 auto 15px;
+  border: 3px solid #e0e0e0;
+  background-color: #f8f9fa;
+  position: relative;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.profilePictureContainer:hover {
+  border-color: #3498db;
+}
+
+.profilePicturePreview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profilePlaceholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: #ecf0f1;
+  color: #7f8c8d;
+}
+
+.placeholderIcon {
+  font-size: 36px;
+  margin-bottom: 5px;
+}
+
+.placeholderText {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.pictureControls {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.uploadButton {
+  background-color: #3498db;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  display: inline-block;
+}
+
+.uploadButton:hover:not(:disabled) {
+  background-color: #2980b9;
+}
+
+.uploadButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.fileInput {
+  display: none;
+}
+
+.removeButton {
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.removeButton:hover:not(:disabled) {
+  background-color: #c0392b;
+}
+
+.removeButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.pictureHint {
+  color: #95a5a6;
+  font-size: 12px;
+  margin: 0;
+  font-style: italic;
+}
+
+/* Form Styles */
 .formGroup {
   margin-bottom: 20px;
 }
 
 .label {
   display: block;
+  color: #2c3e50;
   margin-bottom: 8px;
-  color: #34495e;
   font-weight: 500;
+  font-size: 14px;
 }
 
 .input {
   width: 100%;
-  padding: 12px;
+  padding: 12px 16px;
   border: 1px solid #ddd;
-  border-radius: 4px;
+  border-radius: 8px;
   font-size: 16px;
-  box-sizing: border-box;
-  transition: border-color 0.3s;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  background-color: white;
 }
 
 .input:focus {
   outline: none;
   border-color: #3498db;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+.input:disabled {
+  background-color: #f8f9fa;
+  color: #95a5a6;
+  cursor: not-allowed;
 }
 
 .select {
   width: 100%;
-  padding: 12px;
+  padding: 12px 16px;
   border: 1px solid #ddd;
-  border-radius: 4px;
+  border-radius: 8px;
   font-size: 16px;
-  box-sizing: border-box;
   background-color: white;
   cursor: pointer;
+  transition: border-color 0.2s;
 }
 
 .select:focus {
@@ -77,59 +220,51 @@
   border-color: #3498db;
 }
 
+.select:disabled {
+  background-color: #f8f9fa;
+  color: #95a5a6;
+  cursor: not-allowed;
+}
+
 .button {
-  background-color: #2ecc71;
+  background-color: #3498db;
   color: white;
-  padding: 14px;
   border: none;
-  border-radius: 4px;
+  padding: 14px;
+  border-radius: 8px;
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.3s;
+  transition: background-color 0.2s;
   margin-top: 10px;
 }
 
 .button:hover:not(:disabled) {
-  background-color: #27ae60;
+  background-color: #2980b9;
 }
 
 .button:disabled {
-  background-color: #95a5a6;
+  opacity: 0.6;
   cursor: not-allowed;
-}
-
-.errorAlert {
-  background-color: #f8d7da;
-  color: #721c24;
-  padding: 12px;
-  border-radius: 4px;
-  margin-bottom: 20px;
-  border: 1px solid #f5c6cb;
-}
-
-.successAlert {
-  background-color: #d4edda;
-  color: #155724;
-  padding: 12px;
-  border-radius: 4px;
-  margin-bottom: 20px;
-  border: 1px solid #c3e6cb;
 }
 
 .links {
   text-align: center;
-  margin-top: 20px;
+  margin-top: 25px;
+  padding-top: 20px;
+  border-top: 1px solid #eaeaea;
 }
 
 .linkText {
   color: #7f8c8d;
+  font-size: 14px;
 }
 
 .link {
   color: #3498db;
   text-decoration: none;
   font-weight: 500;
+  margin-left: 5px;
 }
 
 .link:hover {
@@ -137,21 +272,57 @@
 }
 
 .roleInfo {
-  margin-top: 30px;
+  margin-top: 25px;
   padding: 15px;
   background-color: #f8f9fa;
-  border-radius: 4px;
-  border-left: 4px solid #2ecc71;
+  border-radius: 8px;
+  border: 1px solid #eaeaea;
 }
 
 .roleTitle {
-  font-weight: 600;
-  margin-bottom: 8px;
   color: #2c3e50;
+  font-weight: 600;
+  margin: 0 0 10px;
+  font-size: 14px;
 }
 
 .roleText {
+  color: #5d6d7e;
   margin: 5px 0;
-  font-size: 14px;
-  color: #34495e;
+  font-size: 13px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .container {
+    padding: 10px;
+  }
+  
+  .card {
+    padding: 25px;
+  }
+  
+  .title {
+    font-size: 24px;
+  }
+  
+  .subtitle {
+    font-size: 16px;
+  }
+  
+  .profilePictureContainer {
+    width: 100px;
+    height: 100px;
+  }
+  
+  .pictureControls {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .uploadButton,
+  .removeButton {
+    width: 150px;
+    text-align: center;
+  }
 }
