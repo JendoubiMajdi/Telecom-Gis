@@ -1,0 +1,175 @@
+.container {
+  min-height: 100vh;
+  background-color: #f5f7fa;
+}
+
+.header {
+  background-color: #2c3e50;
+  color: white;
+  padding: 20px 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.headerLeft h1 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.headerLeft p {
+  margin: 5px 0 0;
+  color: #bdc3c7;
+  font-size: 14px;
+}
+
+.logoutButton {
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.logoutButton:hover {
+  background-color: #c0392b;
+}
+
+.mainContent {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+.welcomeCard {
+  background: linear-gradient(135deg, #3498db, #2980b9);
+  color: white;
+  padding: 30px;
+  border-radius: 8px;
+  margin-bottom: 30px;
+  box-shadow: 0 4px 20px rgba(52, 152, 219, 0.2);
+}
+
+.welcomeTitle {
+  font-size: 28px;
+  margin: 0 0 10px;
+}
+
+.welcomeText {
+  font-size: 16px;
+  opacity: 0.9;
+  margin: 0;
+}
+
+.dashboardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 30px;
+  margin-bottom: 40px;
+}
+
+.card {
+  background-color: white;
+  border-radius: 8px;
+  padding: 25px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.12);
+}
+
+.cardTitle {
+  color: #2c3e50;
+  margin: 0 0 15px;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cardContent {
+  color: #34495e;
+  line-height: 1.6;
+}
+
+.userInfo {
+  background-color: #f8f9fa;
+  padding: 25px;
+  border-radius: 8px;
+  margin-top: 30px;
+}
+
+.userInfoTitle {
+  color: #2c3e50;
+  margin: 0 0 20px;
+  font-size: 20px;
+  border-bottom: 2px solid #3498db;
+  padding-bottom: 10px;
+}
+
+.userInfoGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.infoItem {
+  background-color: white;
+  padding: 15px;
+  border-radius: 6px;
+  border-left: 4px solid #3498db;
+}
+
+.infoLabel {
+  font-weight: 600;
+  color: #7f8c8d;
+  font-size: 14px;
+  margin-bottom: 5px;
+}
+
+.infoValue {
+  color: #2c3e50;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.roleBadge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-left: 10px;
+}
+
+.roleAdmin {
+  background-color: #e74c3c;
+  color: white;
+}
+
+.roleOperator {
+  background-color: #f39c12;
+  color: white;
+}
+
+.roleViewer {
+  background-color: #27ae60;
+  color: white;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  font-size: 18px;
+  color: #7f8c8d;
+}
