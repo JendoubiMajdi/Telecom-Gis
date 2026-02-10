@@ -1,6 +1,6 @@
 .container {
   min-height: 100vh;
-  background-color: #f5f5f5;
+  background-color: var(--background-color);
   padding: 20px;
   display: flex;
   justify-content: center;
@@ -8,39 +8,40 @@
 }
 
 .profileCard {
-  background: white;
+  background: var(--surface-color);
   border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--card-shadow);
   padding: 40px;
   max-width: 800px;
   width: 100%;
+  border: 1px solid var(--border-color);
 }
 
 .title {
-  color: #2c3e50;
+  color: var(--text-color);
   margin-bottom: 30px;
   font-size: 28px;
   font-weight: 600;
-  border-bottom: 2px solid #f0f0f0;
+  border-bottom: 2px solid var(--border-color);
   padding-bottom: 15px;
 }
 
 .successMessage {
-  background-color: #d4edda;
-  color: #155724;
+  background-color: rgba(39, 174, 96, 0.1);
+  color: var(--success-color);
   padding: 12px 20px;
   border-radius: 6px;
   margin-bottom: 20px;
-  border: 1px solid #c3e6cb;
+  border: 1px solid var(--success-color);
 }
 
 .errorMessage {
-  background-color: #f8d7da;
-  color: #721c24;
+  background-color: rgba(231, 76, 60, 0.1);
+  color: var(--error-color);
   padding: 12px 20px;
   border-radius: 6px;
   margin-bottom: 20px;
-  border: 1px solid #f5c6cb;
+  border: 1px solid var(--error-color);
 }
 
 .profileHeader {
@@ -48,7 +49,7 @@
   gap: 40px;
   margin-bottom: 40px;
   padding-bottom: 30px;
-  border-bottom: 1px solid #eaeaea;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .profilePictureSection {
@@ -62,8 +63,8 @@
   border-radius: 50%;
   overflow: hidden;
   margin: 0 auto 20px;
-  border: 4px solid #e0e0e0;
-  background-color: #f8f9fa;
+  border: 4px solid var(--border-color);
+  background-color: var(--hover-color);
 }
 
 .profilePicture {
@@ -92,18 +93,24 @@
 }
 
 .uploadButton {
-  background-color: #4a6bdf;
+  background-color: var(--primary-color);
   color: white;
   padding: 8px 16px;
   border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
+  font-weight: 500;
   transition: background-color 0.2s;
   display: inline-block;
 }
 
-.uploadButton:hover {
-  background-color: #3a5bd0;
+.uploadButton:hover:not(:disabled) {
+  background-color: var(--secondary-color);
+}
+
+.uploadButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .fileInput {
@@ -111,22 +118,28 @@
 }
 
 .removeButton {
-  background-color: #e74c3c;
+  background-color: var(--error-color);
   color: white;
   border: none;
   padding: 8px 16px;
   border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
+  font-weight: 500;
   transition: background-color 0.2s;
 }
 
-.removeButton:hover {
+.removeButton:hover:not(:disabled) {
   background-color: #c0392b;
 }
 
+.removeButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .pictureHint {
-  color: #666;
+  color: var(--text-secondary);
   font-size: 12px;
   margin-top: 5px;
   max-width: 200px;
@@ -137,22 +150,22 @@
 }
 
 .userName {
-  color: #2c3e50;
+  color: var(--text-color);
   margin: 0 0 10px 0;
   font-size: 24px;
   font-weight: 600;
 }
 
 .userEmail {
-  color: #7f8c8d;
+  color: var(--text-secondary);
   margin: 0 0 15px 0;
   font-size: 16px;
 }
 
 .roleBadge {
   display: inline-block;
-  background-color: #ecf0f1;
-  color: #2c3e50;
+  background-color: var(--hover-color);
+  color: var(--text-color);
   padding: 6px 12px;
   border-radius: 20px;
   font-size: 14px;
@@ -161,13 +174,13 @@
 
 .roleValue {
   font-weight: 600;
-  color: #3498db;
+  color: var(--primary-color);
   margin-left: 5px;
   text-transform: capitalize;
 }
 
 .memberSince {
-  color: #95a5a6;
+  color: var(--text-secondary);
   font-size: 14px;
   margin: 0;
 }
@@ -179,21 +192,21 @@
 }
 
 .formSection {
-  background-color: #f8f9fa;
+  background-color: var(--hover-color);
   padding: 25px;
   border-radius: 8px;
-  border: 1px solid #eaeaea;
+  border: 1px solid var(--border-color);
 }
 
 .sectionTitle {
-  color: #2c3e50;
+  color: var(--text-color);
   margin: 0 0 15px 0;
   font-size: 20px;
   font-weight: 600;
 }
 
 .sectionDescription {
-  color: #7f8c8d;
+  color: var(--text-secondary);
   margin: 0 0 20px 0;
   font-size: 14px;
 }
@@ -204,7 +217,7 @@
 
 .label {
   display: block;
-  color: #2c3e50;
+  color: var(--text-color);
   margin-bottom: 8px;
   font-weight: 500;
   font-size: 14px;
@@ -213,27 +226,28 @@
 .input {
   width: 100%;
   padding: 12px 16px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   font-size: 16px;
   transition: border-color 0.2s, box-shadow 0.2s;
-  background-color: white;
+  background-color: var(--input-bg);
+  color: var(--text-color);
 }
 
 .input:focus {
   outline: none;
-  border-color: #4a6bdf;
+  border-color: var(--primary-color);
   box-shadow: 0 0 0 3px rgba(74, 107, 223, 0.1);
 }
 
 .input:disabled {
-  background-color: #f8f9fa;
-  color: #95a5a6;
+  background-color: var(--hover-color);
+  color: var(--text-secondary);
   cursor: not-allowed;
 }
 
 .hint {
-  color: #95a5a6;
+  color: var(--text-secondary);
   font-size: 13px;
   margin: 8px 0 0 0;
   font-style: italic;
@@ -244,11 +258,11 @@
   justify-content: flex-end;
   gap: 15px;
   padding-top: 20px;
-  border-top: 1px solid #eaeaea;
+  border-top: 1px solid var(--border-color);
 }
 
 .cancelButton {
-  background-color: #95a5a6;
+  background-color: var(--text-secondary);
   color: white;
   border: none;
   padding: 12px 24px;
@@ -261,11 +275,11 @@
 }
 
 .cancelButton:hover:not(:disabled) {
-  background-color: #7f8c8d;
+  background-color: var(--text-color);
 }
 
 .saveButton {
-  background-color: #4a6bdf;
+  background-color: var(--primary-color);
   color: white;
   border: none;
   padding: 12px 24px;
@@ -278,7 +292,7 @@
 }
 
 .saveButton:hover:not(:disabled) {
-  background-color: #3a5bd0;
+  background-color: var(--secondary-color);
 }
 
 .cancelButton:disabled,

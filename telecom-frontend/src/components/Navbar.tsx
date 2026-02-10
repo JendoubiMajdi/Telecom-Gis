@@ -1,26 +1,20 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import styles from './Navbar.module.css';
 
 const Navbar: React.FC = () => {
   const { user, logout, isLoading: authLoading } = useAuth();
+  const { toggleTheme, isDarkMode } = useTheme();
   const navigate = useNavigate();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Debug logging
-  console.log('🔧 Navbar rendering:', { 
-    user: user?.email, 
-    authLoading, 
-    hasProfilePicture: !!profilePicture 
-  });
-
-  // Load profile picture from localStorage
   const loadProfilePicture = () => {
     if (!user) {
-      console.log('❌ No user found for profile picture');
+      console.log(' No user found for profile picture');
       setProfilePicture(null);
       return null;
     }
@@ -28,27 +22,25 @@ const Navbar: React.FC = () => {
     const pictureKey = `profile_picture_${user.id}`;
     const picture = localStorage.getItem(pictureKey);
     
-    console.log('🖼️ Loading profile picture:', {
+    console.log(' Loading profile picture:', {
       userId: user.id,
       pictureKey,
       found: !!picture,
-      pictureLength: picture?.substring(0, 50) + '...' // Show first 50 chars
+      pictureLength: picture?.substring(0, 50) + '...'
     });
     
     setProfilePicture(picture);
     return picture;
   };
 
-  // Load profile picture when user changes
   useEffect(() => {
     console.log('👤 User changed in Navbar:', user?.email);
     loadProfilePicture();
   }, [user]);
 
-  // Listen for storage changes (when profile picture is saved)
   useEffect(() => {
     const handleStorageChange = () => {
-      console.log('💾 Storage changed, reloading profile picture');
+      console.log(' Storage changed, reloading profile picture');
       loadProfilePicture();
     };
 
@@ -56,7 +48,6 @@ const Navbar: React.FC = () => {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, [user]);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -79,8 +70,8 @@ const Navbar: React.FC = () => {
     setIsDropdownOpen(false);
   };
 
-  const toggleTheme = () => {
-    console.log('Toggle theme - to be implemented');
+  const handleThemeToggle = () => {
+    toggleTheme();
     setIsDropdownOpen(false);
   };
 
@@ -88,7 +79,6 @@ const Navbar: React.FC = () => {
     setIsDropdownOpen(!isDropdownOpen);
   };
 
-  // Show loading state while auth is loading
   if (authLoading) {
     return (
       <nav className={styles.navbar}>
@@ -139,7 +129,7 @@ const Navbar: React.FC = () => {
                   alt="Profile" 
                   className={styles.profilePicture}
                   onError={() => {
-                    console.log('❌ Profile picture failed to load');
+                    console.log(' Profile picture failed to load');
                     setProfilePicture(null);
                   }}
                 />
@@ -191,13 +181,15 @@ const Navbar: React.FC = () => {
                 </button>
 
                 <button 
-                  onClick={toggleTheme}
+                  onClick={handleThemeToggle}
                   className={styles.dropdownItem}
                 >
-                  <span className={styles.dropdownIcon}>🌙</span>
-                  Dark Mode
+                  <span className={styles.dropdownIcon}>
+                    {isDarkMode ? '☀️' : '🌙'}
+                  </span>
+                  {isDarkMode ? 'Light Mode' : 'Dark Mode'}
                   <div className={styles.themeToggle}>
-                    <div className={styles.toggleSwitch}></div>
+                    <div className={`${styles.toggleSwitch} ${isDarkMode ? styles.toggleRight : ''}`}></div>
                   </div>
                 </button>
 

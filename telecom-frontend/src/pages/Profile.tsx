@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import styles from './Profile.module.css';
 
 const Profile: React.FC = () => {
-  const { user, logout, updateProfile } = useAuth(); // Add updateProfile
+  const { user, logout, updateProfile } = useAuth(); 
   const navigate = useNavigate();
   
   const [formData, setFormData] = useState({
@@ -82,7 +82,6 @@ const Profile: React.FC = () => {
     setError('');
     setIsLoading(true);
 
-    // Validation
     if (formData.newPassword && formData.newPassword !== formData.confirmPassword) {
       setError('New passwords do not match');
       setIsLoading(false);
@@ -102,35 +101,29 @@ const Profile: React.FC = () => {
     }
 
     try {
-      // Prepare update data
       const updateData: any = {};
       
-      // Only include fullName if it changed
       if (formData.fullName !== user?.fullName) {
         updateData.fullName = formData.fullName;
       }
       
-      // Include password fields if provided
       if (formData.currentPassword && formData.newPassword) {
         updateData.currentPassword = formData.currentPassword;
         updateData.newPassword = formData.newPassword;
       }
 
-      // Check if there are any changes
       if (Object.keys(updateData).length === 0) {
         setError('No changes to update');
         setIsLoading(false);
         return;
       }
 
-      console.log('📤 Sending update data:', updateData);
+      console.log(' Sending update data:', updateData);
       
-      // Call updateProfile API
       const response = await updateProfile(updateData);
       
       setMessage('Profile updated successfully!');
       
-      // Reset password fields
       setFormData(prev => ({
         ...prev,
         currentPassword: '',
@@ -138,12 +131,11 @@ const Profile: React.FC = () => {
         confirmPassword: ''
       }));
       
-      console.log('✅ Profile update response:', response);
+      console.log(' Profile update response:', response);
       
     } catch (err: any) {
-      console.error('❌ Profile update error:', err);
+      console.error(' Profile update error:', err);
       
-      // Extract error message from axios response
       const errorMessage = err.response?.data?.message || 
                           err.message || 
                           'Failed to update profile. Please try again.';
@@ -167,7 +159,6 @@ const Profile: React.FC = () => {
         {error && <div className={styles.errorMessage}>{error}</div>}
         
         <div className={styles.profileHeader}>
-          {/* Profile Picture Section */}
           <div className={styles.profilePictureSection}>
             <div className={styles.profilePictureContainer}>
               {profilePicture ? (

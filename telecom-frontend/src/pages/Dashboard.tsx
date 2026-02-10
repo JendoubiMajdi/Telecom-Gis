@@ -40,11 +40,7 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className={styles.container}>
-      {/* REMOVED THE HEADER SECTION - Now using global Navbar */}
-      
-      {/* Main Content */}
       <main className={styles.mainContent}>
-        {/* Welcome Section */}
         <div className={styles.welcomeCard}>
           <h2 className={styles.welcomeTitle}>
             Welcome, {user.fullName}!
@@ -57,7 +53,6 @@ const Dashboard: React.FC = () => {
           </p>
         </div>
 
-        {/* Dashboard Cards */}
         <div className={styles.dashboardGrid}>
           <div className={styles.card}>
             <h3 className={styles.cardTitle}>
@@ -90,7 +85,6 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* User Information */}
         <div className={styles.userInfo}>
           <h3 className={styles.userInfoTitle}>Your Account Information</h3>
           <div className={styles.userInfoGrid}>
@@ -131,7 +125,6 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Coming Soon */}
         <div className={styles.card} style={{ marginTop: '30px' }}>
           <h3 className={styles.cardTitle}>🚀 Coming Soon</h3>
           <div className={styles.cardContent}>

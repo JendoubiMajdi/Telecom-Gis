@@ -4,11 +4,16 @@
   align-items: center;
   padding: 0 30px;
   height: 70px;
-  background-color: white;
+  background-color: var(--navbar-bg);
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   position: sticky;
   top: 0;
   z-index: 1000;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.dark-theme .navbar {
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
 }
 
 .navLeft {
@@ -22,9 +27,10 @@
   align-items: center;
   gap: 10px;
   text-decoration: none;
-  color: #2c3e50;
+  color: var(--text-color);
   font-weight: 700;
   font-size: 22px;
+  transition: color 0.3s ease;
 }
 
 .logo:hover {
@@ -33,10 +39,12 @@
 
 .logoIcon {
   font-size: 24px;
+  color: var(--primary-color);
+  transition: color 0.3s ease;
 }
 
 .logoText {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--primary-color) 0%, #764ba2 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -48,7 +56,7 @@
 }
 
 .navLink {
-  color: #5d6d7e;
+  color: var(--text-secondary);
   text-decoration: none;
   font-size: 16px;
   font-weight: 500;
@@ -58,7 +66,7 @@
 }
 
 .navLink:hover {
-  color: #4a6bdf;
+  color: var(--primary-color);
 }
 
 .navLink::after {
@@ -68,7 +76,7 @@
   left: 0;
   width: 0;
   height: 2px;
-  background-color: #4a6bdf;
+  background-color: var(--primary-color);
   transition: width 0.3s;
 }
 
@@ -79,21 +87,57 @@
 .navRight {
   display: flex;
   align-items: center;
+  gap: 20px;
 }
 
 .loginButton {
-  background-color: #4a6bdf;
+  background-color: var(--primary-color);
   color: white;
   text-decoration: none;
   padding: 10px 24px;
   border-radius: 6px;
   font-size: 16px;
   font-weight: 500;
-  transition: background-color 0.2s;
+  transition: background-color 0.2s, transform 0.2s;
 }
 
 .loginButton:hover {
-  background-color: #3a5bd0;
+  background-color: var(--secondary-color);
+  transform: translateY(-1px);
+}
+
+.themeToggleWrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.themeToggleButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+  color: var(--text-secondary);
+  font-size: 20px;
+}
+
+.themeToggleButton:hover {
+  background-color: var(--hover-color);
+  color: var(--text-color);
+}
+
+.themeIcon {
+  font-size: 22px;
+  transition: transform 0.3s ease;
+}
+
+.themeToggleButton:hover .themeIcon {
+  transform: rotate(15deg);
 }
 
 .userMenu {
@@ -113,7 +157,7 @@
 }
 
 .userButton:hover {
-  background-color: #f8f9fa;
+  background-color: var(--hover-color);
 }
 
 .profilePicture {
@@ -121,37 +165,40 @@
   height: 40px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid #e0e0e0;
+  border: 2px solid var(--border-color);
+  transition: border-color 0.3s ease;
 }
 
 .profileInitial {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--primary-color) 0%, #764ba2 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   font-weight: 600;
   font-size: 18px;
-  border: 2px solid #e0e0e0;
+  border: 2px solid var(--border-color);
+  transition: border-color 0.3s ease;
 }
 
 .userName {
-  color: #2c3e50;
+  color: var(--text-color);
   font-weight: 500;
   font-size: 16px;
   max-width: 120px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  transition: color 0.3s ease;
 }
 
 .dropdownArrow {
   font-size: 12px;
-  color: #7f8c8d;
-  transition: transform 0.2s;
+  color: var(--text-secondary);
+  transition: transform 0.2s, color 0.3s ease;
 }
 
 .arrowUp {
@@ -167,11 +214,17 @@
   top: calc(100% + 10px);
   right: 0;
   width: 320px;
-  background: white;
+  background: var(--dropdown-bg);
   border-radius: 12px;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
   padding: 20px 0;
   animation: slideDown 0.2s ease-out;
+  border: 1px solid var(--border-color);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.dark-theme .dropdownMenu {
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
 }
 
 @keyframes slideDown {
@@ -197,21 +250,23 @@
   height: 60px;
   border-radius: 50%;
   object-fit: cover;
-  border: 3px solid #e0e0e0;
+  border: 3px solid var(--border-color);
+  transition: border-color 0.3s ease;
 }
 
 .dropdownProfileInitial {
   width: 60px;
   height: 60px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--primary-color) 0%, #764ba2 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   font-weight: 600;
   font-size: 24px;
-  border: 3px solid #e0e0e0;
+  border: 3px solid var(--border-color);
+  transition: border-color 0.3s ease;
 }
 
 .dropdownUserInfo {
@@ -219,34 +274,38 @@
 }
 
 .dropdownUserName {
-  color: #2c3e50;
+  color: var(--text-color);
   font-weight: 600;
   font-size: 16px;
   margin-bottom: 4px;
+  transition: color 0.3s ease;
 }
 
 .dropdownUserEmail {
-  color: #7f8c8d;
+  color: var(--text-secondary);
   font-size: 14px;
   margin-bottom: 6px;
   word-break: break-all;
+  transition: color 0.3s ease;
 }
 
 .dropdownUserRole {
-  color: #5d6d7e;
+  color: var(--text-secondary);
   font-size: 13px;
+  transition: color 0.3s ease;
 }
 
 .roleText {
   font-weight: 600;
-  color: #3498db;
+  color: var(--primary-color);
   text-transform: capitalize;
 }
 
 .dropdownDivider {
   height: 1px;
-  background-color: #eaeaea;
+  background-color: var(--border-color);
   margin: 15px 0;
+  transition: background-color 0.3s ease;
 }
 
 .dropdownItem {
@@ -259,15 +318,15 @@
   border: none;
   text-align: left;
   cursor: pointer;
-  color: #5d6d7e;
+  color: var(--text-color);
   font-size: 15px;
   font-weight: 500;
-  transition: background-color 0.2s;
+  transition: background-color 0.2s, color 0.3s ease;
 }
 
 .dropdownItem:hover {
-  background-color: #f8f9fa;
-  color: #4a6bdf;
+  background-color: var(--hover-color);
+  color: var(--primary-color);
 }
 
 .dropdownIcon {
@@ -276,43 +335,71 @@
   text-align: center;
 }
 
-.themeToggle {
-  margin-left: auto;
-  width: 40px;
-  height: 20px;
-  background-color: #e0e0e0;
-  border-radius: 10px;
-  position: relative;
-  transition: background-color 0.2s;
+.themeToggleItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 12px 20px;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  color: var(--text-color);
+  font-size: 15px;
+  font-weight: 500;
+  transition: background-color 0.2s, color 0.3s ease;
 }
 
-.toggleSwitch {
+.themeToggleItem:hover {
+  background-color: var(--hover-color);
+}
+
+.themeSwitch {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  background-color: var(--text-secondary);
+  border-radius: 12px;
+  transition: background-color 0.3s ease;
+}
+
+.themeSwitch::after {
+  content: '';
   position: absolute;
   top: 2px;
   left: 2px;
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   background-color: white;
   border-radius: 50%;
-  transition: transform 0.2s;
+  transition: transform 0.3s ease;
+}
+
+.dark-theme .themeSwitch {
+  background-color: var(--primary-color);
+}
+
+.dark-theme .themeSwitch::after {
+  transform: translateX(20px);
 }
 
 .logoutItem {
-  color: #e74c3c;
+  color: var(--error-color);
+  transition: color 0.3s ease;
 }
 
 .logoutItem:hover {
   color: #c0392b;
-  background-color: #fdf2f2;
+  background-color: rgba(231, 76, 60, 0.1);
 }
 
 .loadingText {
-  color: #7f8c8d;
+  color: var(--text-secondary);
   font-size: 14px;
   padding: 8px 16px;
 }
 
-/* Responsive */
 @media (max-width: 768px) {
   .navbar {
     padding: 0 15px;
@@ -338,5 +425,9 @@
   .dropdownMenu {
     width: 280px;
     right: -10px;
+  }
+  
+  .themeToggleWrapper span {
+    display: none;
   }
 }

@@ -1,6 +1,6 @@
 .container {
   min-height: calc(100vh - 70px); 
-  background-color: #f5f7fa;
+  background-color: var(--background-color);
 }
 
 .mainContent {
@@ -10,7 +10,7 @@
 }
 
 .welcomeCard {
-  background: linear-gradient(135deg, #3498db, #2980b9);
+  background: linear-gradient(135deg, var(--primary-color), #2980b9);
   color: white;
   padding: 30px;
   border-radius: 12px;
@@ -42,22 +42,22 @@
 }
 
 .card {
-  background-color: white;
+  background-color: var(--surface-color);
   border-radius: 12px;
   padding: 25px;
-  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--card-shadow);
   transition: all 0.3s ease;
-  border: 1px solid #eaeaea;
+  border: 1px solid var(--border-color);
 }
 
 .card:hover {
   transform: translateY(-5px);
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
-  border-color: #3498db;
+  border-color: var(--primary-color);
 }
 
 .cardTitle {
-  color: #2c3e50;
+  color: var(--text-color);
   margin: 0 0 15px;
   font-size: 20px;
   font-weight: 600;
@@ -67,7 +67,7 @@
 }
 
 .cardContent {
-  color: #5d6d7e;
+  color: var(--text-secondary);
   line-height: 1.7;
 }
 
@@ -80,21 +80,21 @@
 }
 
 .userInfo {
-  background-color: white;
+  background-color: var(--surface-color);
   padding: 30px;
   border-radius: 12px;
   margin-top: 30px;
-  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
-  border: 1px solid #eaeaea;
+  box-shadow: var(--card-shadow);
+  border: 1px solid var(--border-color);
 }
 
 .userInfoTitle {
-  color: #2c3e50;
+  color: var(--text-color);
   margin: 0 0 25px;
   font-size: 22px;
   font-weight: 600;
   padding-bottom: 15px;
-  border-bottom: 2px solid #3498db;
+  border-bottom: 2px solid var(--primary-color);
 }
 
 .userInfoGrid {
@@ -104,21 +104,21 @@
 }
 
 .infoItem {
-  background-color: #f8f9fa;
+  background-color: var(--hover-color);
   padding: 20px;
   border-radius: 8px;
-  border-left: 4px solid #3498db;
+  border-left: 4px solid var(--primary-color);
   transition: all 0.2s ease;
 }
 
 .infoItem:hover {
-  background-color: #f0f7ff;
+  background-color: rgba(52, 152, 219, 0.1);
   transform: translateX(5px);
 }
 
 .infoLabel {
   font-weight: 600;
-  color: #7f8c8d;
+  color: var(--text-secondary);
   font-size: 14px;
   margin-bottom: 8px;
   text-transform: uppercase;
@@ -126,7 +126,7 @@
 }
 
 .infoValue {
-  color: #2c3e50;
+  color: var(--text-color);
   font-size: 16px;
   font-weight: 500;
   display: flex;
@@ -166,11 +166,10 @@
   align-items: center;
   min-height: calc(100vh - 70px);
   font-size: 18px;
-  color: #7f8c8d;
+  color: var(--text-secondary);
   font-weight: 500;
 }
 
-/* Responsive styles */
 @media (max-width: 768px) {
   .container {
     min-height: calc(100vh - 60px);

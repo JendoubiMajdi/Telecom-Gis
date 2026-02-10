@@ -40,13 +40,11 @@ const Register: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
     if (!file.type.startsWith('image/')) {
       setError('Please upload an image file');
       return;
     }
 
-    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       setError('Image size should be less than 5MB');
       return;
@@ -94,9 +92,7 @@ const Register: React.FC = () => {
         formData.role
       );
 
-      // Immediately save profile picture to localStorage
       if (profilePicture) {
-        // Wait a moment for localStorage to be updated
         setTimeout(() => {
           const userStr = localStorage.getItem('user');
           const token = localStorage.getItem('token');
@@ -105,15 +101,14 @@ const Register: React.FC = () => {
             try {
               const user = JSON.parse(userStr);
               localStorage.setItem(`profile_picture_${user.id}`, profilePicture);
-              console.log('✅ Profile picture saved for user ID:', user.id);
+              console.log(' Profile picture saved for user ID:', user.id);
               
-              // Force Navbar to reload profile picture
               window.dispatchEvent(new Event('storage'));
             } catch (err) {
-              console.error('❌ Error saving profile picture:', err);
+              console.error(' Error saving profile picture:', err);
             }
           } else {
-            console.error('❌ User or token not found in localStorage');
+            console.error(' User or token not found in localStorage');
           }
         }, 100);
       }
@@ -150,7 +145,6 @@ const Register: React.FC = () => {
         )}
 
         <form onSubmit={handleSubmit} className={styles.form}>
-          {/* Profile Picture Section */}
           <div className={styles.profilePictureSection}>
             <div className={styles.profilePictureContainer}>
               {profilePicture ? (
