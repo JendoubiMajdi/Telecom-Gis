@@ -3,91 +3,88 @@ Telecom-Gis
 A web-based Geographic Information System (GIS) platform for managing telecom infrastructure.
 
 ✅ What's Working Now
-User Authentication System with PostgreSQL database
+User Authentication – PostgreSQL + JWT
 
-Login/Register pages with form validation
+Login/Register – Form validation
 
-Two-Factor Authentication (2FA) with email OTP verification
+Two-Factor Authentication (2FA) – 6-digit OTP via email
 
-Password Reset flow with secure email links
+Password Reset – Secure token-based recovery
 
-Protected Dashboard with role-based access
+Role-Based Dashboard – Protected routes
 
-JWT Token-based authentication with account lockout protection
+Account Lockout – 5 failed attempts = 15min lock
 
-Dark Mode theme support across all pages
+Dark Mode – Full theme support
 
-PostgreSQL Database with users, OTP codes, and password reset tables
+Database – Users, OTP codes, password reset tables
 
 🚀 New Features Added
-2FA Verification - 6-digit OTP codes via email (Mailtrap)
+2FA Verification – Email OTP (Mailtrap)
 
-Forgot/Reset Password - Secure token-based password recovery
+Forgot/Reset Password – Token-based flow
 
-Account Security - 5 failed attempts = 15min lockout
+Account Security – Brute force protection
 
-Professional Footer - Telcotec company info, map, services
+Footer – Telcotec info, map, services
 
-Company Logo - Telcotec branding across platform
+Branding – Telcotec logo + favicon
 
-Email Service - Mailtrap integration for development emails
+Email Service – Nodemailer + Mailtrap
 
 🛠️ Tech Stack
-Frontend: React, TypeScript, CSS Modules
-
-Backend: Node.js, Express, TypeScript
-
-Database: PostgreSQL
+Frontend	Backend	Database	Auth/Email
+React + TypeScript	Node.js + Express	PostgreSQL	JWT + bcrypt
+CSS Modules	TypeScript		crypto + Nodemailer
 
 📁 Project Structure
 Telecom-Gis/
-├── telecom-frontend/     # React + TypeScript
-│   ├── src/
-│   │   ├── components/  # Navbar, Footer, PrivateRoute
-│   │   ├── pages/       # Login, Register, Dashboard, Profile,
-│   │   │               # OTPVerification, ForgotPassword, ResetPassword
-│   │   ├── context/     # AuthContext, ThemeContext
-│   │   └── services/    # auth.service.ts
-│   └── public/          # Telcotec logo, favicon
 │
-└── telecom-backend/     # Node.js + Express
+├── telecom-frontend/
+│   ├── public/              # Logo, favicon
+│   └── src/
+│       ├── components/      # Navbar, Footer, PrivateRoute
+│       ├── pages/           # Login, Register, Dashboard, Profile,
+│       │                   # OTPVerification, ForgotPassword, ResetPassword
+│       ├── context/         # AuthContext, ThemeContext
+│       └── services/        # auth.service.ts
+│
+└── telecom-backend/
     ├── src/
-    │   ├── controllers/ # auth.controller.ts
-    │   ├── services/    # user.service.ts, emailService.ts
-    │   ├── models/      # User.ts, JwtPayload.ts
-    │   ├── routes/      # auth.routes.ts
-    │   ├── middleware/  # auth.middleware.ts
-    │   ├── utils/       # jwt.ts, password.ts
-    │   └── db/          # database.ts
-    └── .env            # Config (DB, JWT, Mailtrap)
+    │   ├── controllers/     # auth.controller.ts
+    │   ├── services/        # user.service.ts, emailService.ts
+    │   ├── models/          # User.ts, JwtPayload.ts
+    │   ├── routes/          # auth.routes.ts
+    │   ├── middleware/      # auth.middleware.ts
+    │   ├── utils/           # jwt.ts, password.ts
+    │   └── db/              # database.ts
+    └── .env                 # Configuration
 
     🚦 Getting Started
-1. Backend Setup
-2. cd telecom-backend
-npm install
-cp .env.example .env   # Update with your credentials
-npm run dev
+1. Backend
+   cd telecom-backend
+    npm install
+    cp .env.example .env
+    npm run dev
 
-3. Frontend Setup
-4. cd telecom-frontend
-npm install
-npm start
+2. Frontend
+    cd telecom-frontend
+    npm install
+    npm start
 
 🔑 Environment Variables (.env)
-# Database
+    # Database
 DATABASE_URL=postgresql://user:pass@localhost:5432/telecom_gis
 
 # JWT
 JWT_SECRET=your_secret_key
 
-# Email (Mailtrap)
+# Mailtrap
 EMAIL_HOST=sandbox.smtp.mailtrap.io
 EMAIL_PORT=2525
 EMAIL_USER=your_user
 EMAIL_PASS=your_pass
 
-👨‍💻 Author
-Majdi Jendoubi - PFE Project 2026
-Authentication: JWT, bcrypt, crypto
 
-Email: Nodemailer + Mailtrap
+👨‍💻 Author
+Majdi Jendoubi – PFE Project 2026
