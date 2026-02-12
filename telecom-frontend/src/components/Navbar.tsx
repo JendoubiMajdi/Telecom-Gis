@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import styles from './Navbar.module.css';
+import telcotecLogo from '../assets/telcoteclogo.png';
 
 const Navbar: React.FC = () => {
   const { user, logout, isLoading: authLoading } = useAuth();
@@ -83,10 +84,13 @@ const Navbar: React.FC = () => {
     return (
       <nav className={styles.navbar}>
         <div className={styles.navLeft}>
-          <div className={styles.logo}>
-            <span className={styles.logoIcon}>📡</span>
-            <span className={styles.logoText}>Telecom GIS</span>
-          </div>
+          <Link to="/dashboard" className={styles.logo}>
+            <img 
+              src={telcotecLogo} 
+              alt="Telcotec Logo" 
+              className={styles.logoImage}
+            />
+          </Link>
         </div>
         <div className={styles.navRight}>
           <div className={styles.loadingText}>Loading...</div>
@@ -99,8 +103,11 @@ const Navbar: React.FC = () => {
     <nav className={styles.navbar}>
       <div className={styles.navLeft}>
         <Link to="/dashboard" className={styles.logo}>
-          <span className={styles.logoIcon}>📡</span>
-          <span className={styles.logoText}>Telecom GIS</span>
+          <img 
+            src={telcotecLogo} 
+            alt="Telcotec Logo" 
+            className={styles.logoImage}
+          />
         </Link>
         
         {user && (
@@ -118,6 +125,17 @@ const Navbar: React.FC = () => {
       <div className={styles.navRight}>
         {user ? (
           <div className={styles.userMenu} ref={dropdownRef}>
+            {/* Theme toggle button outside dropdown */}
+            <button 
+              onClick={handleThemeToggle}
+              className={styles.themeToggleButton}
+              aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              <span className={styles.themeIcon}>
+                {isDarkMode ? '☀️' : '🌙'}
+              </span>
+            </button>
+
             <button 
               className={styles.userButton}
               onClick={toggleDropdown}
@@ -180,17 +198,18 @@ const Navbar: React.FC = () => {
                   My Profile
                 </button>
 
+                {/* Theme toggle in dropdown */}
                 <button 
                   onClick={handleThemeToggle}
-                  className={styles.dropdownItem}
+                  className={styles.themeToggleItem}
                 >
-                  <span className={styles.dropdownIcon}>
-                    {isDarkMode ? '☀️' : '🌙'}
-                  </span>
-                  {isDarkMode ? 'Light Mode' : 'Dark Mode'}
-                  <div className={styles.themeToggle}>
-                    <div className={`${styles.toggleSwitch} ${isDarkMode ? styles.toggleRight : ''}`}></div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <span className={styles.dropdownIcon}>
+                      {isDarkMode ? '☀️' : '🌙'}
+                    </span>
+                    {isDarkMode ? 'Light Mode' : 'Dark Mode'}
                   </div>
+                  <div className={styles.themeSwitch}></div>
                 </button>
 
                 <div className={styles.dropdownDivider}></div>
@@ -206,9 +225,20 @@ const Navbar: React.FC = () => {
             )}
           </div>
         ) : (
-          <Link to="/login" className={styles.loginButton}>
-            Login
-          </Link>
+          <>
+            <button 
+              onClick={handleThemeToggle}
+              className={styles.themeToggleButton}
+              aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              <span className={styles.themeIcon}>
+                {isDarkMode ? '☀️' : '🌙'}
+              </span>
+            </button>
+            <Link to="/login" className={styles.loginButton}>
+              Login
+            </Link>
+          </>
         )}
       </div>
     </nav>

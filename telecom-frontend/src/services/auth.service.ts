@@ -28,6 +28,8 @@ export interface User {
   fullName: string;
   role: string;
   createdAt: string;
+  isEmailVerified?: boolean;
+  twoFactorEnabled?: boolean;
 }
 
 export interface LoginData {
@@ -57,6 +59,71 @@ export interface UpdateProfileResponse {
   user: User;
 }
 
+
+export interface SendOtpRequest {
+  email: string;
+  purpose?: 'login' | 'reset-password' | 'verify-email';
+}
+
+export interface VerifyOtpRequest {
+  email: string;
+  otp: string;
+  purpose?: 'login' | 'reset-password' | 'verify-email';
+}
+
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+export interface ResetPasswordRequest {
+  token: string;
+  newPassword: string;
+}
+
+export interface VerifyEmailRequest {
+  token: string;
+}
+
+export interface SendOtpResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    otp?: string; 
+  };
+}
+
+export interface VerifyOtpResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    token?: string;
+    user?: User;
+  };
+}
+
+export interface ForgotPasswordResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    resetToken?: string; 
+    resetLink?: string; 
+  };
+}
+
+export interface ResetPasswordResponse {
+  success: boolean;
+  message: string;
+}
+
+export interface TwoFAStatusResponse {
+  success: boolean;
+  data: {
+    twoFactorEnabled: boolean;
+    isEmailVerified: boolean;
+  };
+}
+
+
 export const authService = {
   register: async (userData: RegisterData): Promise<AuthResponse> => {
     const response = await api.post<AuthResponse>(`${API_URL}/register`, userData);
@@ -84,7 +151,6 @@ export const authService = {
   updateProfile: async (profileData: UpdateProfileData): Promise<UpdateProfileResponse> => {
     const response = await api.put<UpdateProfileResponse>(`${API_URL}/profile`, profileData);
     
-    // Update localStorage with new user data
     if (response.data.user) {
       localStorage.setItem('user', JSON.stringify(response.data.user));
     }
@@ -109,6 +175,85 @@ export const authService = {
     const userStr = localStorage.getItem('user');
     return userStr ? JSON.parse(userStr) : null;
   },
+
+  
+  // Send OTP to email
+  sendOtp: async (email: string, purpose: string = 'login'): Promise<SendOtpResponse> => {
+    const response = await api.post<SendOtpResponse>(`${API_URL}/send-otp`, { email, purpose });
+    return response.data;
+  },
+
+  // Verify OTP code
+  verifyOtp: async (email: string, otp: string, purpose: string = 'login'): Promise<VerifyOtpResponse> => {
+    const response = await api.post<VerifyOtpResponse>(`${API_URL}/verify-otp`, { 
+      email, 
+      otp, 
+      purpose 
+    });
+    
+    // If OTP is for login and successful, store token
+    if (response.data.success && purpose === 'login' && response.data.data?.token) {
+      localStorage.setItem('token', response.data.data.token);
+      if (response.data.data.user) {
+        localStorage.setItem('user', JSON.stringify(response.data.data.user));
+      }
+    }
+    
+    return response.data;
+  },
+
+  // Request password reset
+  forgotPassword: async (email: string): Promise<ForgotPasswordResponse> => {
+    const response = await api.post<ForgotPasswordResponse>(`${API_URL}/forgot-password`, { email });
+    return response.data;
+  },
+
+  // Reset password with token
+  resetPassword: async (token: string, newPassword: string): Promise<ResetPasswordResponse> => {
+    const response = await api.post<ResetPasswordResponse>(`${API_URL}/reset-password`, { 
+      token, 
+      newPassword 
+    });
+    return response.data;
+  },
+
+  // Verify email
+  verifyEmail: async (token: string): Promise<{ success: boolean; message: string }> => {
+    const response = await api.post(`${API_URL}/verify-email`, { token });
+    return response.data;
+  },
+
+  // Check 2FA status (requires authentication)
+  check2FAStatus: async (): Promise<TwoFAStatusResponse> => {
+    const response = await api.get<TwoFAStatusResponse>(`${API_URL}/2fa-status`);
+    return response.data;
+  },
+
+  // Check if user has 2FA enabled
+  has2FAEnabled: (): boolean => {
+    const userStr = localStorage.getItem('user');
+    if (!userStr) return false;
+    const user: User = JSON.parse(userStr);
+    return user?.twoFactorEnabled || false;
+  },
+
+  // Check if email is verified
+  isEmailVerified: (): boolean => {
+    const userStr = localStorage.getItem('user');
+    if (!userStr) return false;
+    const user: User = JSON.parse(userStr);
+    return user?.isEmailVerified || false;
+  },
+
+  // Update user in localStorage
+  updateLocalUser: (updatedUser: Partial<User>): void => {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      const currentUser: User = JSON.parse(userStr);
+      const newUser = { ...currentUser, ...updatedUser };
+      localStorage.setItem('user', JSON.stringify(newUser));
+    }
+  }
 };
 
 export default authService;

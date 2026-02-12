@@ -1,3 +1,5 @@
+/* Navbar.module.css - Updated with Logo and Dark Theme */
+
 .navbar {
   display: flex;
   justify-content: space-between;
@@ -12,6 +14,7 @@
   transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
+/* Dark theme specific navbar shadow */
 .dark-theme .navbar {
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
 }
@@ -30,24 +33,23 @@
   color: var(--text-color);
   font-weight: 700;
   font-size: 22px;
-  transition: color 0.3s ease;
+  transition: opacity 0.3s ease;
 }
 
 .logo:hover {
   opacity: 0.9;
 }
 
-.logoIcon {
-  font-size: 24px;
-  color: var(--primary-color);
-  transition: color 0.3s ease;
+.logoImage {
+  height: 40px;
+  width: auto;
+  object-fit: contain;
+  transition: filter 0.3s ease;
 }
 
-.logoText {
-  background: linear-gradient(135deg, var(--primary-color) 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+/* Dark mode logo adjustment */
+.dark-theme .logoImage {
+  filter: brightness(0.9) contrast(1.1);
 }
 
 .navLinks {
@@ -106,12 +108,7 @@
   transform: translateY(-1px);
 }
 
-.themeToggleWrapper {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
+/* Theme Toggle Button Styles */
 .themeToggleButton {
   background: none;
   border: none;
@@ -142,6 +139,9 @@
 
 .userMenu {
   position: relative;
+  display: flex;
+  align-items: center;
+  gap: 15px;
 }
 
 .userButton {
@@ -223,6 +223,7 @@
   transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
+/* Dark theme specific dropdown shadow */
 .dark-theme .dropdownMenu {
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
 }
@@ -335,6 +336,7 @@
   text-align: center;
 }
 
+/* Theme Toggle Dropdown Item */
 .themeToggleItem {
   display: flex;
   align-items: center;
@@ -400,6 +402,7 @@
   padding: 8px 16px;
 }
 
+/* Responsive */
 @media (max-width: 768px) {
   .navbar {
     padding: 0 15px;
@@ -410,8 +413,8 @@
     gap: 20px;
   }
   
-  .logoText {
-    display: none;
+  .logoImage {
+    height: 35px;
   }
   
   .navLinks {
@@ -427,7 +430,11 @@
     right: -10px;
   }
   
-  .themeToggleWrapper span {
-    display: none;
+  .themeToggleButton {
+    padding: 6px;
+  }
+  
+  .themeIcon {
+    font-size: 20px;
   }
 }
