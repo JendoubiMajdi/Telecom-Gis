@@ -13,6 +13,7 @@ import { generateToken } from '../utils/jwt';
 import { userService } from '../services/user.service';
 import { emailService } from '../utils/emailService';
 
+
 // Helper function to convert user to response
 const toUserResponse = (user: any): UserResponse => ({
   id: user.id,
@@ -555,6 +556,45 @@ export const verifyEmail = async (req: Request, res: Response): Promise<void> =>
       success: false,
       message: 'Failed to verify email' 
     });
+  }
+};
+
+export const toggle2FA = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const authReq = req as any;
+    const userId = authReq.userId;
+    const { enable2FA, password } = req.body;
+
+    if (!userId) {
+      res.status(401).json({ success: false, message: 'Not authenticated' });
+      return;
+    }
+
+    const user = await userService.findUserById(userId);
+    if (!user) {
+      res.status(404).json({ success: false, message: 'User not found' });
+      return;
+    }
+
+    // If disabling 2FA, verify password
+    if (!enable2FA) {
+      const isValidPassword = await userService.verifyPassword(password, user.password);
+      if (!isValidPassword) {
+        res.status(401).json({ success: false, message: 'Invalid password' });
+        return;
+      }
+    }
+
+    await userService.update2FASettings(userId, enable2FA);
+    
+    res.status(200).json({
+      success: true,
+      message: `2FA ${enable2FA ? 'enabled' : 'disabled'} successfully`
+    });
+
+  } catch (error) {
+    console.error('Toggle 2FA error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
 

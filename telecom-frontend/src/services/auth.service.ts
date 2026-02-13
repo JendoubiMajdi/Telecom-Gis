@@ -59,16 +59,16 @@ export interface UpdateProfileResponse {
   user: User;
 }
 
-
+// ============ UPDATED INTERFACES WITH 2FA-ENABLE ============
 export interface SendOtpRequest {
   email: string;
-  purpose?: 'login' | 'reset-password' | 'verify-email';
+  purpose?: 'login' | 'reset-password' | 'verify-email' | '2fa-enable';
 }
 
 export interface VerifyOtpRequest {
   email: string;
   otp: string;
-  purpose?: 'login' | 'reset-password' | 'verify-email';
+  purpose?: 'login' | 'reset-password' | 'verify-email' | '2fa-enable';
 }
 
 export interface ForgotPasswordRequest {
@@ -123,6 +123,11 @@ export interface TwoFAStatusResponse {
   };
 }
 
+// ============ NEW INTERFACE FOR TOGGLE 2FA ============
+export interface Toggle2FAResponse {
+  success: boolean;
+  message: string;
+}
 
 export const authService = {
   register: async (userData: RegisterData): Promise<AuthResponse> => {
@@ -176,7 +181,6 @@ export const authService = {
     return userStr ? JSON.parse(userStr) : null;
   },
 
-  
   // Send OTP to email
   sendOtp: async (email: string, purpose: string = 'login'): Promise<SendOtpResponse> => {
     const response = await api.post<SendOtpResponse>(`${API_URL}/send-otp`, { email, purpose });
@@ -226,6 +230,15 @@ export const authService = {
   // Check 2FA status (requires authentication)
   check2FAStatus: async (): Promise<TwoFAStatusResponse> => {
     const response = await api.get<TwoFAStatusResponse>(`${API_URL}/2fa-status`);
+    return response.data;
+  },
+
+  // ============ NEW: Toggle 2FA on/off ============
+  toggle2FA: async (enable2FA: boolean, password: string = ''): Promise<Toggle2FAResponse> => {
+    const response = await api.post<Toggle2FAResponse>(`${API_URL}/toggle-2fa`, { 
+      enable2FA, 
+      password 
+    });
     return response.data;
   },
 

@@ -14,22 +14,30 @@ interface AuthContextType {
   token: string | null;
   isLoading: boolean;
   
+  // Authentication
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, fullName: string, role: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
   
+  // Profile
   updateProfile: (data: UpdateProfileData) => Promise<{ message: string; user: User }>;
   
+  // 2FA & Security
   sendOtp: (email: string, purpose?: string) => Promise<SendOtpResponse>;
   verifyOtp: (email: string, otp: string, purpose?: string) => Promise<VerifyOtpResponse>;
   forgotPassword: (email: string) => Promise<ForgotPasswordResponse>;
   resetPassword: (token: string, newPassword: string) => Promise<ResetPasswordResponse>;
   check2FAStatus: () => Promise<TwoFAStatusResponse>;
+  toggle2FA: (enable2FA: boolean, password?: string) => Promise<any>; // ✅ ADDED
   
+  // 2FA State Management
+  isVerifyingOTP: () => boolean;
+  setVerifyingOTP: (value: boolean) => void;
+  
+  // User State
   has2FAEnabled: () => boolean;
   isEmailVerified: () => boolean;
-  
   updateUserState: (updatedUser: Partial<User>) => void;
 }
 
@@ -60,8 +68,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (storedToken && storedUser) {
         try {
           const currentUser = await authService.getCurrentUser();
-          setUser(currentUser);
+          
+          // Ensure 2FA field exists
+          const userWith2FA = {
+            ...currentUser,
+            twoFactorEnabled: currentUser.twoFactorEnabled || false
+          };
+          
+          setUser(userWith2FA);
           setToken(storedToken);
+          authService.updateLocalUser(userWith2FA);
+          
+          // Check if user needs to verify OTP
+          const isVerifying = sessionStorage.getItem('isVerifyingOTP') === 'true';
+          const pathname = window.location.pathname;
+          
+          // If user is on OTP page, don't redirect
+          if (pathname === '/otp-verification') {
+            return;
+          }
+          
+          // If user has 2FA enabled and is in verification process, redirect to OTP
+          if (userWith2FA.twoFactorEnabled && isVerifying) {
+            window.location.href = '/otp-verification';
+            return;
+          }
+          
         } catch (error) {
           authService.logout();
           setUser(null);
@@ -77,8 +109,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (email: string, password: string) => {
     try {
       const response = await authService.login({ email, password });
-      setUser(response.user);
+      
+      // Ensure user object has twoFactorEnabled
+      const userWith2FA = {
+        ...response.user,
+        twoFactorEnabled: response.user.twoFactorEnabled || false
+      };
+      
+      setUser(userWith2FA);
       setToken(response.token);
+      
+      // Update localStorage with complete user object
+      localStorage.setItem('user', JSON.stringify(userWith2FA));
+      localStorage.setItem('token', response.token);
+      
     } catch (error) {
       throw error;
     }
@@ -92,8 +136,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         fullName, 
         role: role as 'admin' | 'operator' | 'viewer' 
       });
-      setUser(response.user);
+      
+      // Ensure user object has twoFactorEnabled on register
+      const userWith2FA = {
+        ...response.user,
+        twoFactorEnabled: response.user.twoFactorEnabled || false
+      };
+      
+      setUser(userWith2FA);
       setToken(response.token);
+      
+      // Update localStorage
+      localStorage.setItem('user', JSON.stringify(userWith2FA));
+      localStorage.setItem('token', response.token);
+      
     } catch (error) {
       throw error;
     }
@@ -108,8 +164,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const updateProfile = async (data: UpdateProfileData) => {
     try {
       const response = await authService.updateProfile(data);
-      setUser(response.user);
-      authService.updateLocalUser(response.user);
+      
+      // Ensure 2FA field exists
+      const updatedUser = {
+        ...response.user,
+        twoFactorEnabled: response.user.twoFactorEnabled || false
+      };
+      
+      setUser(updatedUser);
+      authService.updateLocalUser(updatedUser);
       return response;
     } catch (error) {
       throw error;
@@ -132,9 +195,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (response.success && purpose === 'login' && response.data?.token) {
         const updatedUser = response.data.user || user;
         if (updatedUser) {
-          setUser(updatedUser);
+          // Ensure 2FA field exists
+          const userWith2FA = {
+            ...updatedUser,
+            twoFactorEnabled: updatedUser.twoFactorEnabled || false
+          };
+          setUser(userWith2FA);
           setToken(response.data.token);
-          authService.updateLocalUser(updatedUser);
+          authService.updateLocalUser(userWith2FA);
         }
       }
       
@@ -182,6 +250,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const toggle2FA = async (enable2FA: boolean, password: string = ''): Promise<any> => {
+    try {
+      const response = await authService.toggle2FA(enable2FA, password);
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  };
+
   const has2FAEnabled = (): boolean => {
     return authService.has2FAEnabled();
   };
@@ -195,6 +272,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const newUser = { ...user, ...updatedUser };
       setUser(newUser);
       authService.updateLocalUser(newUser);
+    }
+  };
+
+  // 2FA State Management
+  const isVerifyingOTP = (): boolean => {
+    return sessionStorage.getItem('isVerifyingOTP') === 'true';
+  };
+
+  const setVerifyingOTP = (value: boolean): void => {
+    if (value) {
+      sessionStorage.setItem('isVerifyingOTP', 'true');
+    } else {
+      sessionStorage.removeItem('isVerifyingOTP');
     }
   };
 
@@ -215,6 +305,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     forgotPassword,
     resetPassword,
     check2FAStatus,
+    toggle2FA,
+    
+    isVerifyingOTP,
+    setVerifyingOTP,
     
     has2FAEnabled,
     isEmailVerified,

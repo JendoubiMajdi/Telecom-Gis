@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import TwoFASettings from '../components/TwoFASettings'; // ✅ ADD THIS IMPORT
 import styles from './Profile.module.css';
 
 const Profile: React.FC = () => {
@@ -55,9 +56,7 @@ const Profile: React.FC = () => {
         
         if (user) {
           localStorage.setItem(`profile_picture_${user.id}`, result);
-          
           window.dispatchEvent(new Event('storage'));
-          
           console.log('📸 Profile picture updated and event triggered');
         }
       };
@@ -69,9 +68,7 @@ const Profile: React.FC = () => {
     setProfilePicture(null);
     if (user) {
       localStorage.removeItem(`profile_picture_${user.id}`);
-      
       window.dispatchEvent(new Event('storage'));
-      
       console.log('🗑️ Profile picture removed and event triggered');
     }
   };
@@ -213,6 +210,11 @@ const Profile: React.FC = () => {
               Member since: {new Date(user.createdAt).toLocaleDateString()}
             </p>
           </div>
+        </div>
+        
+        {/* ✅ 2FA SETTINGS SECTION - ADD THIS */}
+        <div className={styles.twoFASection}>
+          <TwoFASettings />
         </div>
         
         <form onSubmit={handleSubmit} className={styles.form}>

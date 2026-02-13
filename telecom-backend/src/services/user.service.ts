@@ -5,91 +5,179 @@ import crypto from 'crypto';
 
 export const userService = {
 
-  // Update user profile
-  updateUser: async (userId: string, updateData: { fullName?: string; password?: string }): Promise<User | null> => {
-    try {
-      let query = 'UPDATE users SET updated_at = CURRENT_TIMESTAMP';
-      const values: any[] = [];
-      let paramCount = 1;
+// Update user profile
+updateUser: async (userId: string, updateData: { fullName?: string; password?: string }): Promise<User | null> => {
+  try {
+    let query = 'UPDATE users SET updated_at = CURRENT_TIMESTAMP';
+    const values: any[] = [];
+    let paramCount = 1;
 
-      if (updateData.fullName) {
-        query += `, full_name = $${paramCount}`;
-        values.push(updateData.fullName);
-        paramCount++;
-      }
-
-      if (updateData.password) {
-        const hashedPassword = await hashPassword(updateData.password);
-        query += `, password_hash = $${paramCount}`;
-        values.push(hashedPassword);
-        paramCount++;
-      }
-
-      query += ` WHERE id = $${paramCount} RETURNING id, email, password_hash as password, full_name as "fullName", role, created_at as "createdAt", updated_at as "updatedAt"`;
-      values.push(userId);
-
-      const result = await pool.query(query, values);
-      
-      return result.rows.length > 0 ? result.rows[0] : null;
-    } catch (error) {
-      console.error('Error updating user:', error);
-      throw error;
+    if (updateData.fullName) {
+      query += `, full_name = $${paramCount}`;
+      values.push(updateData.fullName);
+      paramCount++;
     }
-  },
-  // Find user by email
-  findUserByEmail: async (email: string): Promise<User | null> => {
-    try {
-      const result = await pool.query(
-        'SELECT id, email, password_hash as password, full_name as "fullName", role, created_at as "createdAt", updated_at as "updatedAt" FROM users WHERE email = $1',
-        [email]
-      );
-      
-      return result.rows.length > 0 ? result.rows[0] : null;
-    } catch (error) {
-      console.error('Error finding user by email:', error);
-      throw error;
-    }
-  },
 
-  // Find user by ID
-  findUserById: async (id: string): Promise<User | null> => {
-    try {
-      const result = await pool.query(
-        'SELECT id, email, password_hash as password, full_name as "fullName", role, created_at as "createdAt", updated_at as "updatedAt" FROM users WHERE id = $1',
-        [id]
-      );
-      
-      return result.rows.length > 0 ? result.rows[0] : null;
-    } catch (error) {
-      console.error('Error finding user by ID:', error);
-      throw error;
+    if (updateData.password) {
+      const hashedPassword = await hashPassword(updateData.password);
+      query += `, password_hash = $${paramCount}`;
+      values.push(hashedPassword);
+      paramCount++;
     }
-  },
+
+    query += ` WHERE id = $${paramCount} RETURNING id, email, password_hash, full_name as "fullName", role, created_at as "createdAt", updated_at as "updatedAt", two_factor_enabled as "twoFactorEnabled", is_email_verified as "isEmailVerified"`;
+    values.push(userId);
+
+    const result = await pool.query(query, values);
+    
+    if (result.rows.length > 0) {
+      const user = result.rows[0];
+      user.password = user.password_hash;
+      delete user.password_hash;
+      return user;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error updating user:', error);
+    throw error;
+  }
+},
+
+// Find user by email
+findUserByEmail: async (email: string): Promise<User | null> => {
+  try {
+    const result = await pool.query(
+      'SELECT id, email, password_hash, full_name as "fullName", role, created_at as "createdAt", updated_at as "updatedAt", two_factor_enabled as "twoFactorEnabled", is_email_verified as "isEmailVerified" FROM users WHERE email = $1',
+      [email]
+    );
+    
+    if (result.rows.length > 0) {
+      const user = result.rows[0];
+      user.password = user.password_hash;
+      delete user.password_hash;
+      return user;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error finding user by email:', error);
+    throw error;
+  }
+},
+
+// Find user by ID
+findUserById: async (id: string): Promise<User | null> => {
+  try {
+    const result = await pool.query(
+      'SELECT id, email, password_hash, full_name as "fullName", role, created_at as "createdAt", updated_at as "updatedAt", two_factor_enabled as "twoFactorEnabled", is_email_verified as "isEmailVerified" FROM users WHERE id = $1',
+      [id]
+    );
+    
+    if (result.rows.length > 0) {
+      const user = result.rows[0];
+      user.password = user.password_hash;
+      delete user.password_hash;
+      return user;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error finding user by ID:', error);
+    throw error;
+  }
+},
+
 
   // Create new user
-  createUser: async (userData: CreateUserInput): Promise<User> => {
+// Create new user
+createUser: async (userData: CreateUserInput): Promise<User> => {
+  try {
+    const hashedPassword = await hashPassword(userData.password);
+    
+    // First check if columns exist, use dynamic query
+    let query = `
+      INSERT INTO users (email, password_hash, full_name, role
+    `;
+    let values = [userData.email, hashedPassword, userData.fullName, userData.role || 'viewer'];
+    let placeholders = 5;
+    
+    // Try to add optional columns
     try {
-      const hashedPassword = await hashPassword(userData.password);
+      // Check if two_factor_enabled column exists
+      const checkColumn = await pool.query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'users' AND column_name = 'two_factor_enabled'
+      `);
       
-      const result = await pool.query(
-        `INSERT INTO users (email, password_hash, full_name, role) 
-         VALUES ($1, $2, $3, $4) 
-         RETURNING id, email, password_hash as password, full_name as "fullName", role, created_at as "createdAt", updated_at as "updatedAt"`,
-        [userData.email, hashedPassword, userData.fullName, userData.role || 'viewer']
-      );
-      
-      return result.rows[0];
-    } catch (error: any) {
-      console.error('Error creating user:', error);
-      
-      // Handle duplicate email error
-      if (error.code === '23505') { // PostgreSQL unique violation
-        throw new Error('Email already exists');
+      if (checkColumn.rows.length > 0) {
+        query += `, two_factor_enabled`;
+        values.push('false');
+        placeholders++;
       }
       
-      throw error;
+      // Check if is_email_verified column exists
+      const checkEmailColumn = await pool.query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'users' AND column_name = 'is_email_verified'
+      `);
+      
+      if (checkEmailColumn.rows.length > 0) {
+        query += `, is_email_verified`;
+        values.push('false');
+        placeholders++;
+      }
+    } catch (err) {
+      console.log('Error checking columns:', err);
     }
-  },
+    
+    query += `) VALUES (`;
+    for (let i = 1; i <= values.length; i++) {
+      query += `$${i}`;
+      if (i < values.length) query += `, `;
+    }
+    query += `) RETURNING id, email, password_hash as password, full_name as "fullName", role, created_at as "createdAt", updated_at as "updatedAt"`;
+    
+    // Also try to add 2FA fields to RETURNING if they exist
+    try {
+      const check2FAColumn = await pool.query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'users' AND column_name = 'two_factor_enabled'
+      `);
+      if (check2FAColumn.rows.length > 0) {
+        query += `, two_factor_enabled as "twoFactorEnabled"`;
+      }
+      
+      const checkEmailVerifiedColumn = await pool.query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'users' AND column_name = 'is_email_verified'
+      `);
+      if (checkEmailVerifiedColumn.rows.length > 0) {
+        query += `, is_email_verified as "isEmailVerified"`;
+      }
+    } catch (err) {
+      console.log('Error checking RETURNING columns:', err);
+    }
+
+    const result = await pool.query(query, values);
+    
+    // Ensure returned user has default values for missing fields
+    const user = result.rows[0];
+    user.twoFactorEnabled = user.twoFactorEnabled || false;
+    user.isEmailVerified = user.isEmailVerified || false;
+    
+    return user;
+  } catch (error: any) {
+    console.error('Error creating user:', error);
+    
+    if (error.code === '23505') {
+      throw new Error('Email already exists');
+    }
+    
+    throw error;
+  }
+},
 
   // Verify user password
   verifyPassword: async (password: string, hashedPassword: string): Promise<boolean> => {
@@ -100,7 +188,7 @@ export const userService = {
   getAllUsers: async (): Promise<User[]> => {
     try {
       const result = await pool.query(
-        'SELECT id, email, full_name as "fullName", role, created_at as "createdAt" FROM users ORDER BY created_at DESC'
+        'SELECT id, email, full_name as "fullName", role, created_at as "createdAt", two_factor_enabled as "twoFactorEnabled", is_email_verified as "isEmailVerified" FROM users ORDER BY created_at DESC'
       );
       
       return result.rows;
@@ -110,6 +198,7 @@ export const userService = {
     }
   },
 
+  // Generate and store OTP
   generateAndStoreOtp: async (email: string, purpose: string = 'login'): Promise<string> => {
     try {
       // Generate 6-digit OTP
@@ -136,6 +225,7 @@ export const userService = {
       throw error;
     }
   },
+
   // Verify OTP
   verifyOtp: async (email: string, otp: string): Promise<boolean> => {
     try {
@@ -168,7 +258,7 @@ export const userService = {
     }
   },
 
-    // Create password reset token
+  // Create password reset token
   createPasswordResetToken: async (email: string): Promise<string> => {
     try {
       // Generate random token using imported crypto
@@ -187,7 +277,6 @@ export const userService = {
       throw error;
     }
   },
-
 
   // Verify password reset token
   verifyPasswordResetToken: async (token: string): Promise<{ email: string } | null> => {

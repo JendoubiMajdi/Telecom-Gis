@@ -11,10 +11,22 @@ const OTPVerification: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [resendCooldown, setResendCooldown] = useState<number>(0);
   const [timer, setTimer] = useState<number>(60);
-  
-  const { verifyOtp, sendOtp } = useAuth();
+
+  const { verifyOtp, sendOtp, setVerifyingOTP } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Set verification flag when component mounts
+  useEffect(() => {
+    setVerifyingOTP(true);
+    
+    return () => {
+      // Only clear flag if navigating away without success
+      if (window.location.pathname !== '/dashboard') {
+        setVerifyingOTP(false);
+      }
+    };
+  }, [setVerifyingOTP]);
 
   // Get email from location state or localStorage
   useEffect(() => {
@@ -24,23 +36,35 @@ const OTPVerification: React.FC = () => {
     if (stateEmail) {
       setEmail(stateEmail);
     } else if (storedUser) {
-      const user = JSON.parse(storedUser);
-      setEmail(user.email);
+      try {
+        const user = JSON.parse(storedUser);
+        setEmail(user.email);
+      } catch (err) {
+        console.error('Error parsing stored user:', err);
+      }
     }
-    
-    // Start countdown timer
-    const countdown = setInterval(() => {
-      setTimer(prev => {
-        if (prev <= 1) {
-          clearInterval(countdown);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(countdown);
   }, [location]);
+
+  // Timer countdown effect
+  useEffect(() => {
+    let countdown: NodeJS.Timeout;
+    
+    if (timer > 0) {
+      countdown = setInterval(() => {
+        setTimer(prev => {
+          if (prev <= 1) {
+            clearInterval(countdown);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+
+    return () => {
+      if (countdown) clearInterval(countdown);
+    };
+  }, [timer]);
 
   // Handle OTP input changes (auto-advance)
   const handleOtpChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
@@ -72,21 +96,38 @@ const OTPVerification: React.FC = () => {
       return;
     }
     
+    if (!email) {
+      setError('Email not found. Please login again.');
+      setTimeout(() => navigate('/login'), 2000);
+      return;
+    }
+    
     setLoading(true);
     
     try {
       const response = await verifyOtp(email, otp, 'login');
       
       if (response.success) {
+        // Clear verification flag on success
+        setVerifyingOTP(false);
         setSuccess('OTP verified successfully! Redirecting...');
+        
+        // Clear OTP from state
+        setOtp('');
+        
         setTimeout(() => {
           navigate('/dashboard');
         }, 1500);
       } else {
         setError(response.message || 'Invalid OTP');
+        // Clear OTP input on error
+        setOtp('');
+        // Focus first input
+        document.getElementById('otp-0')?.focus();
       }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to verify OTP');
+      setOtp('');
     } finally {
       setLoading(false);
     }
@@ -94,6 +135,11 @@ const OTPVerification: React.FC = () => {
 
   const handleResendOtp = async () => {
     if (resendCooldown > 0) return;
+    if (!email) {
+      setError('Email not found. Please login again.');
+      setTimeout(() => navigate('/login'), 2000);
+      return;
+    }
     
     setError('');
     setSuccess('');
@@ -103,9 +149,15 @@ const OTPVerification: React.FC = () => {
       const response = await sendOtp(email, 'login');
       
       if (response.success) {
+        // Keep verification flag active
+        setVerifyingOTP(true);
         setSuccess('New OTP sent to your email');
         setResendCooldown(60);
         setTimer(60);
+        setOtp('');
+        
+        // Focus first input
+        document.getElementById('otp-0')?.focus();
         
         // Start cooldown timer
         const cooldownInterval = setInterval(() => {
@@ -128,7 +180,23 @@ const OTPVerification: React.FC = () => {
   };
 
   const handleGoBack = () => {
+    // Clear verification flag when going back to login
+    setVerifyingOTP(false);
     navigate('/login');
+  };
+
+  // Handle paste event for OTP
+  const handlePaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData('text');
+    const numbers = pastedData.replace(/[^0-9]/g, '').slice(0, 6);
+    
+    if (numbers.length > 0) {
+      setOtp(numbers);
+      // Focus last filled input
+      const index = Math.min(numbers.length - 1, 5);
+      document.getElementById(`otp-${index}`)?.focus();
+    }
   };
 
   return (
@@ -138,7 +206,7 @@ const OTPVerification: React.FC = () => {
           <h2 className={styles.title}>Two-Factor Authentication</h2>
           <p className={styles.subtitle}>
             Enter the 6-digit verification code sent to<br />
-            <span className={styles.email}>{email}</span>
+            <span className={styles.email}>{email || 'your email'}</span>
           </p>
         </div>
 
@@ -157,7 +225,7 @@ const OTPVerification: React.FC = () => {
         )}
 
         <form onSubmit={handleSubmit} className={styles.form}>
-          <div className={styles.otpContainer}>
+          <div className={styles.otpContainer} onPaste={handlePaste}>
             {[0, 1, 2, 3, 4, 5].map((index) => (
               <input
                 key={index}
@@ -170,6 +238,7 @@ const OTPVerification: React.FC = () => {
                 className={styles.otpInput}
                 disabled={loading}
                 autoFocus={index === 0}
+                autoComplete="off"
               />
             ))}
           </div>

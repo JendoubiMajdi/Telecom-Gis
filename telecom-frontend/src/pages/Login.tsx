@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import styles from './Login.module.css';
+import authService from '../services/auth.service';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState<string>('');
@@ -9,8 +10,8 @@ const Login: React.FC = () => {
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [showPassword, setShowPassword] = useState<boolean>(false);
-  
-  const { login, isAuthenticated, sendOtp, has2FAEnabled } = useAuth();
+
+  const { login, isAuthenticated, sendOtp, has2FAEnabled, setVerifyingOTP } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -19,42 +20,45 @@ const Login: React.FC = () => {
     }
   }, [isAuthenticated, navigate]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setError('');
+  setLoading(true);
 
-    try {
-      // First, try regular login
-      await login(email, password);
-      
-      // Check if user has 2FA enabled
-      const userHas2FA = has2FAEnabled();
-      
-      if (userHas2FA) {
-        // If 2FA is enabled, send OTP and redirect to verification
-        try {
-          await sendOtp(email, 'login');
-          navigate('/otp-verification', { state: { email } });
-          return; // Don't navigate to dashboard yet
-        } catch (otpError: any) {
-          console.error('Failed to send OTP:', otpError);
-          // Continue to dashboard even if OTP fails (fallback)
-        }
+  try {
+    await login(email, password);
+    
+    const userHas2FA = has2FAEnabled();
+    console.log('✅ has2FAEnabled():', userHas2FA);
+    
+    if (userHas2FA) {
+      try {
+        // ✅ SET VERIFICATION FLAG BEFORE SENDING OTP
+        setVerifyingOTP(true);
+        console.log('✅ 2FA flag set, sending OTP...');
+        
+        await sendOtp(email, 'login');
+        console.log('✅ OTP sent, redirecting to verification');
+        
+        navigate('/otp-verification', { state: { email } });
+        return;
+      } catch (otpError: any) {
+        console.error('❌ Failed to send OTP:', otpError);
+        setVerifyingOTP(false); // Clear flag on error
       }
-      
-      // If no 2FA or OTP failed, go to dashboard
-      navigate('/dashboard');
-      
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message || 
-                          err.response?.data?.error || 
-                          'Login failed. Please check your credentials.';
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
     }
-  };
+    
+    navigate('/dashboard');
+    
+  } catch (err: any) {
+    const errorMessage = err.response?.data?.message || 
+                        err.response?.data?.error || 
+                        'Login failed. Please check your credentials.';
+    setError(errorMessage);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleForgotPassword = () => {
     navigate('/forgot-password');
