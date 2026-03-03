@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 Telecom-Gis
 📋 Project Overview
 A web-based Geographic Information System (GIS) platform for managing telecom infrastructure.
@@ -88,3 +89,7 @@ EMAIL_PASS=your_pass
 
 👨‍💻 Author
 Majdi Jendoubi – PFE Project 2026
+=======
+Authentication: JWT, bcrypt, crypto
+
+Email: Nodemailer + Mailtrap
