@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import TwoFASettings from '../components/TwoFASettings'; // ✅ ADD THIS IMPORT
+import TwoFASettings from '../components/TwoFASettings'; 
 import styles from './Profile.module.css';
 
 const Profile: React.FC = () => {
@@ -212,7 +212,6 @@ const Profile: React.FC = () => {
           </div>
         </div>
         
-        {/* ✅ 2FA SETTINGS SECTION - ADD THIS */}
         <div className={styles.twoFASection}>
           <TwoFASettings />
         </div>

@@ -12,6 +12,7 @@ import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import Footer from './components/Footer';
+import NetworkMap from './pages/NetworkMap';
 import './App.css';
 
 const App: React.FC = () => {
@@ -27,7 +28,7 @@ const App: React.FC = () => {
               <Route path="/otp-verification" element={<OTPVerification />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
-              
+
               {/* Protected Routes with Navbar & Footer */}
               <Route path="/dashboard" element={
                 <PrivateRoute>
@@ -40,7 +41,7 @@ const App: React.FC = () => {
                   </div>
                 </PrivateRoute>
               } />
-              
+
               <Route path="/profile" element={
                 <PrivateRoute>
                   <div className="layout-container">
@@ -52,18 +53,30 @@ const App: React.FC = () => {
                   </div>
                 </PrivateRoute>
               } />
-              
+
+              <Route path="/map" element={
+                <PrivateRoute>
+                  <div className="layout-container">
+                    <Navbar />
+                    <main className="main-content">
+                      <NetworkMap />
+                    </main>
+                    <Footer />
+                  </div>
+                </PrivateRoute>
+              } />
+
               {/* Redirect root to login */}
               <Route path="/" element={<Navigate to="/login" replace />} />
-              
+
               {/* 404 Page */}
               <Route path="*" element={
-                <div style={{ 
-                  display: 'flex', 
-                  justifyContent: 'center', 
-                  alignItems: 'center', 
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
                   height: '100vh',
-                  flexDirection: 'column' 
+                  flexDirection: 'column'
                 }}>
                   <h1 style={{ fontSize: '48px', color: '#2c3e50' }}>404</h1>
                   <p style={{ fontSize: '18px', color: '#7f8c8d' }}>Page not found</p>

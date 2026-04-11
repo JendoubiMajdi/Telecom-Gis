@@ -1,0 +1,133 @@
+.mapPage {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  background: var(--bg-primary, #ffffff);
+  border-bottom: 1px solid #e2e8f0;
+  flex-wrap: wrap;
+  z-index: 1000;
+}
+
+.controls h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a202c;
+  margin-right: 8px;
+}
+
+.filterBtn {
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1.5px solid #cbd5e0;
+  background: #f7fafc;
+  color: #4a5568;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.filterBtn:hover {
+  border-color: #667eea;
+  color: #667eea;
+}
+
+.filterBtn.active {
+  background: #667eea;
+  border-color: #667eea;
+  color: #ffffff;
+}
+
+.filterBtn.tech2g.active  { background: #48bb78; border-color: #48bb78; }
+.filterBtn.tech3g.active  { background: #ed8936; border-color: #ed8936; }
+.filterBtn.tech4g.active  { background: #4299e1; border-color: #4299e1; }
+.filterBtn.tech5g.active  { background: #9f7aea; border-color: #9f7aea; }
+.filterBtn.tech5gfdd.active { background: #b794f4; border-color: #b794f4; }
+.filterBtn.tech5gtdd.active { background: #76e4f7; border-color: #76e4f7; }
+
+.stats {
+  display: flex;
+  gap: 16px;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+.statBadge {
+  font-size: 12px;
+  color: #718096;
+  background: #edf2f7;
+  padding: 4px 10px;
+  border-radius: 12px;
+}
+
+.statBadge span {
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.mapContainer {
+  width: 100%;
+  height: calc(100vh - 230px);
+  min-height: 400px;
+}
+
+.loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  padding: 12px 24px;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+  font-size: 14px;
+  color: #4a5568;
+  z-index: 1000;
+}
+
+.popup {
+  min-width: 180px;
+}
+
+.popup h4 {
+  margin: 0 0 6px 0;
+  font-size: 14px;
+  color: #1a202c;
+}
+
+.popup p {
+  margin: 3px 0;
+  font-size: 12px;
+  color: #4a5568;
+}
+
+.techBadge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  margin: 2px 2px 0 0;
+  color: white;
+}
+
+.mapPage {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;        /* ← important */
+}
+
+.mapWrapper {
+  flex: 1;             /* ← important */
+  min-height: 0;       /* ← important */
+  width: 100%;
+}

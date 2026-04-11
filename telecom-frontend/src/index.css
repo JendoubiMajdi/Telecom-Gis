@@ -58,7 +58,9 @@ code {
 }
 
 .App {
-  min-height: 100vh;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 input, select, button {
@@ -104,6 +106,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+
 #root {
-  min-height: 100vh;
+  height: 100vh;
 }
