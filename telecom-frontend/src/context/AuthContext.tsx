@@ -15,7 +15,7 @@ interface AuthContextType {
   isLoading: boolean;
   
   // Authentication
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<{ requiresOtp: boolean; user: User }>;
   register: (email: string, password: string, fullName: string, role: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
@@ -59,6 +59,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(authService.getUser());
   const [token, setToken] = useState<string | null>(authService.getToken());
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isOtpVerified, setIsOtpVerified] = useState<boolean>(
+    sessionStorage.getItem('isOtpVerified') === 'true'
+  );
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -85,12 +88,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           
           // If user is on OTP page, don't redirect
           if (pathname === '/otp-verification') {
-            return;
-          }
-          
-          // If user has 2FA enabled and is in verification process, redirect to OTP
-          if (userWith2FA.twoFactorEnabled && isVerifying) {
-            window.location.href = '/otp-verification';
+          setIsOtpVerified(false); // Ensure OTP verification is not marked as complete
+          return;
+        }
+        
+        // If user has 2FA enabled and is in verification process, redirect to OTP
+        if (userWith2FA.twoFactorEnabled && isVerifying) {
+          setIsOtpVerified(false);
+          window.location.href = '/otp-verification';
+          return;
+        }
+        
+          // If user has 2FA enabled but OTP not verified, redirect to login
+          if (userWith2FA.twoFactorEnabled && !isOtpVerified) {
+            authService.logout();
+            setUser(null);
+            setToken(null);
+            setIsOtpVerified(false);
+            sessionStorage.removeItem('isOtpVerified');
+            if (pathname !== '/login') {
+              window.location.href = '/login';
+            }
             return;
           }
           
@@ -98,6 +116,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           authService.logout();
           setUser(null);
           setToken(null);
+          setIsOtpVerified(false);
         }
       }
       setIsLoading(false);
@@ -116,13 +135,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         twoFactorEnabled: response.user.twoFactorEnabled || false
       };
       
+      // If 2FA is enabled, don't set user/token yet - wait for OTP verification
+      if (userWith2FA.twoFactorEnabled) {
+        // Store temp data for OTP verification
+        sessionStorage.setItem('tempUser', JSON.stringify(userWith2FA));
+        sessionStorage.setItem('tempToken', response.token);
+        return { requiresOtp: true, user: userWith2FA };
+      }
+      
+      // No 2FA - set user/token normally
       setUser(userWith2FA);
       setToken(response.token);
+      setIsOtpVerified(true);
+      sessionStorage.setItem('isOtpVerified', 'true');
       
       // Update localStorage with complete user object
       localStorage.setItem('user', JSON.stringify(userWith2FA));
       localStorage.setItem('token', response.token);
       
+      return { requiresOtp: false, user: userWith2FA };
     } catch (error) {
       throw error;
     }
@@ -159,6 +190,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     authService.logout();
     setUser(null);
     setToken(null);
+    setIsOtpVerified(false);
+    sessionStorage.removeItem('isOtpVerified');
+    sessionStorage.removeItem('tempUser');
+    sessionStorage.removeItem('tempToken');
   };
 
   const updateProfile = async (data: UpdateProfileData) => {
@@ -193,15 +228,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await authService.verifyOtp(email, otp, purpose);
       
       if (response.success && purpose === 'login' && response.data?.token) {
-        const updatedUser = response.data.user || user;
-        if (updatedUser) {
+        // Get user data from temp storage or response
+        const tempUserStr = sessionStorage.getItem('tempUser');
+        const tempToken = sessionStorage.getItem('tempToken');
+        
+        const updatedUser = response.data.user || (tempUserStr ? JSON.parse(tempUserStr) : user);
+        const finalToken = response.data.token || tempToken;
+        
+        if (updatedUser && finalToken) {
           // Ensure 2FA field exists
           const userWith2FA = {
             ...updatedUser,
             twoFactorEnabled: updatedUser.twoFactorEnabled || false
           };
+          
           setUser(userWith2FA);
-          setToken(response.data.token);
+          setToken(finalToken);
+          setIsOtpVerified(true);
+          sessionStorage.setItem('isOtpVerified', 'true');
+          
+          // Clear temp data
+          sessionStorage.removeItem('tempUser');
+          sessionStorage.removeItem('tempToken');
+          
           authService.updateLocalUser(userWith2FA);
         }
       }
@@ -296,7 +345,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     login,
     register,
     logout,
-    isAuthenticated: !!token,
+    isAuthenticated: !!token && (!user?.twoFactorEnabled || isOtpVerified),
     
     updateProfile,
     

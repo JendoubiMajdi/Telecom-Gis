@@ -1,26 +1,6 @@
-import axios from 'axios';
+import api from './api';
 
-const API_URL = 'http://localhost:5000/api/auth';
-
-axios.defaults.baseURL = 'http://localhost:5000';
-
-const api = axios.create({
-  baseURL: 'http://localhost:5000',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
+const API_URL = '/auth';
 
 export interface User {
   id: string;
@@ -132,19 +112,11 @@ export interface Toggle2FAResponse {
 export const authService = {
   register: async (userData: RegisterData): Promise<AuthResponse> => {
     const response = await api.post<AuthResponse>(`${API_URL}/register`, userData);
-    if (response.data.token) {
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
-    }
     return response.data;
   },
 
   login: async (credentials: LoginData): Promise<AuthResponse> => {
     const response = await api.post<AuthResponse>(`${API_URL}/login`, credentials);
-    if (response.data.token) {
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
-    }
     return response.data;
   },
 

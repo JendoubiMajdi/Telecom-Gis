@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import Navbar from './components/Navbar';
-import PrivateRoute from './components/PrivateRoute';
+import PrivateRoute, { AdminRoute } from './components/PrivateRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import OTPVerification from './pages/OTPVerification';
@@ -55,7 +55,7 @@ const App: React.FC = () => {
               } />
 
               <Route path="/map" element={
-                <PrivateRoute>
+                <AdminRoute>
                   <div className="layout-container">
                     <Navbar />
                     <main className="main-content">
@@ -63,7 +63,7 @@ const App: React.FC = () => {
                     </main>
                     <Footer />
                   </div>
-                </PrivateRoute>
+                </AdminRoute>
               } />
 
               {/* Redirect root to login */}

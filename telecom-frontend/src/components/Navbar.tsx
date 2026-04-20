@@ -115,6 +115,11 @@ const Navbar: React.FC = () => {
             <Link to="/dashboard" className={styles.navLink}>
               Dashboard
             </Link>
+            {user.role === 'admin' && (
+              <Link to="/map" className={styles.navLink}>
+                Map
+              </Link>
+            )}
             <Link to="/profile" className={styles.navLink}>
               Profile
             </Link>

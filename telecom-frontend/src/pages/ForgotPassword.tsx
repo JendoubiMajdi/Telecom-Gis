@@ -8,9 +8,6 @@ const ForgotPassword: React.FC = () => {
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
-  const [showResetInfo, setShowResetInfo] = useState<boolean>(false);
-  const [resetToken, setResetToken] = useState<string>('');
-  const [resetLink, setResetLink] = useState<string>('');
   
   const { forgotPassword } = useAuth();
   const navigate = useNavigate();
@@ -19,7 +16,6 @@ const ForgotPassword: React.FC = () => {
     e.preventDefault();
     setError('');
     setSuccess('');
-    setShowResetInfo(false);
     
     if (!email) {
       setError('Please enter your email address');
@@ -38,14 +34,6 @@ const ForgotPassword: React.FC = () => {
       
       if (response.success) {
         setSuccess(response.message);
-        
-        // In development, show reset token/link
-        if (response.data?.resetToken || response.data?.resetLink) {
-          setShowResetInfo(true);
-          setResetToken(response.data.resetToken || '');
-          setResetLink(response.data.resetLink || '');
-        }
-        
         // Clear form
         setEmail('');
       } else {
@@ -55,26 +43,6 @@ const ForgotPassword: React.FC = () => {
       setError(err.response?.data?.message || 'An error occurred. Please try again.');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleCopyToken = () => {
-    if (resetToken) {
-      navigator.clipboard.writeText(resetToken);
-      alert('Reset token copied to clipboard!');
-    }
-  };
-
-  const handleCopyLink = () => {
-    if (resetLink) {
-      navigator.clipboard.writeText(resetLink);
-      alert('Reset link copied to clipboard!');
-    }
-  };
-
-  const handleGoToReset = () => {
-    if (resetToken) {
-      navigate(`/reset-password?token=${resetToken}`);
     }
   };
 
@@ -99,7 +67,7 @@ const ForgotPassword: React.FC = () => {
           </div>
         )}
 
-        {success && !showResetInfo && (
+        {success && (
           <div className={styles.successAlert}>
             <span className={styles.alertIcon}>✅</span>
             {success}
@@ -141,99 +109,29 @@ const ForgotPassword: React.FC = () => {
           </form>
         )}
 
-        {/* Development Info - Only shown in dev mode */}
-        {showResetInfo && (
-          <div className={styles.devInfo}>
-            <div className={styles.devHeader}>
-              <span className={styles.devIcon}>🚀</span>
-              <h3 className={styles.devTitle}>Development Mode</h3>
-            </div>
-            
-            <p className={styles.devText}>
-              In production, this would be sent via email. For development:
-            </p>
-            
-            <div className={styles.tokenSection}>
-              <div className={styles.tokenHeader}>
-                <span className={styles.tokenIcon}>🔑</span>
-                <h4 className={styles.tokenTitle}>Reset Token</h4>
-              </div>
-              <div className={styles.tokenBox}>
-                <code className={styles.tokenValue}>{resetToken}</code>
-                <button 
-                  onClick={handleCopyToken}
-                  className={styles.copyButton}
-                >
-                  📋 Copy
-                </button>
-              </div>
-            </div>
-            
-            <div className={styles.linkSection}>
-              <div className={styles.linkHeader}>
-                <span className={styles.linkIcon}>🔗</span>
-                <h4 className={styles.linkTitle}>Reset Link</h4>
-              </div>
-              <div className={styles.linkBox}>
-                <a 
-                  href={resetLink} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className={styles.linkValue}
-                >
-                  {resetLink}
-                </a>
-                <button 
-                  onClick={handleCopyLink}
-                  className={styles.copyButton}
-                >
-                  📋 Copy
-                </button>
-              </div>
-            </div>
-            
-            <div className={styles.actionButtons}>
-              <button 
-                onClick={handleGoToReset}
-                className={styles.resetButton}
-              >
-                🚀 Go to Reset Password
-              </button>
-              <button 
-                onClick={handleGoToLogin}
-                className={styles.loginButton}
-              >
-                ↩ Back to Login
-              </button>
-            </div>
+        <div className={styles.footer}>
+          <div className={styles.links}>
+            <span className={styles.linkText}>Remember your password?</span>
+            <Link to="/login" className={styles.link}>
+              Back to Login
+            </Link>
           </div>
-        )}
-
-        {!showResetInfo && (
-          <div className={styles.footer}>
-            <div className={styles.links}>
-              <span className={styles.linkText}>Remember your password?</span>
-              <Link to="/login" className={styles.link}>
-                Back to Login
-              </Link>
-            </div>
-            
-            <div className={styles.helpSection}>
-              <h4 className={styles.helpTitle}>💡 Need help?</h4>
-              <ul className={styles.helpList}>
-                <li className={styles.helpItem}>
-                  Check your spam or junk folder
-                </li>
-                <li className={styles.helpItem}>
-                  Ensure you entered the correct email
-                </li>
-                <li className={styles.helpItem}>
-                  Reset links expire after 15 minutes
-                </li>
-              </ul>
-            </div>
+          
+          <div className={styles.helpSection}>
+            <h4 className={styles.helpTitle}>💡 Need help?</h4>
+            <ul className={styles.helpList}>
+              <li className={styles.helpItem}>
+                Check your spam or junk folder
+              </li>
+              <li className={styles.helpItem}>
+                Ensure you entered the correct email
+              </li>
+              <li className={styles.helpItem}>
+                Reset links expire after 15 minutes
+              </li>
+            </ul>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

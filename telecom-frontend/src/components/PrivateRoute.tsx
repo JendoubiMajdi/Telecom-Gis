@@ -15,4 +15,26 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
   return user ? <>{children}</> : <Navigate to="/login" />;
 };
 
+interface AdminRouteProps {
+  children: React.ReactNode;
+}
+
+export const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
+  if (!user) {
+    return <Navigate to="/login" />;
+  }
+
+  if (user.role !== 'admin') {
+    return <Navigate to="/dashboard" />;
+  }
+
+  return <>{children}</>;
+};
+
 export default PrivateRoute;

@@ -2,29 +2,114 @@
   display: flex;
   flex-direction: column;
   width: 100%;
+  height: 100vh;
 }
 
-.controls {
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: var(--bg-primary, #ffffff);
+  border-bottom: 1px solid #e2e8f0;
+  z-index: 1000;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.titleSection {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 20px;
-  background: var(--bg-primary, #ffffff);
-  border-bottom: 1px solid #e2e8f0;
-  flex-wrap: wrap;
-  z-index: 1000;
 }
 
-.controls h2 {
+.titleSection h2 {
   margin: 0;
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 20px;
+  font-weight: 700;
   color: #1a202c;
-  margin-right: 8px;
+}
+
+.subtitle {
+  margin: 6px 0 0;
+  color: #4a5568;
+  font-size: 13px;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.controlButtons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.smallBtn {
+  padding: 8px 12px;
+  border-radius: 16px;
+  border: 1px solid #cbd5e0;
+  background: #ffffff;
+  color: #4a5568;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.smallBtn:hover {
+  background: #f7fafc;
+  border-color: #667eea;
+  color: #2b6cb0;
+}
+
+.smallBtn.active {
+  background: #667eea;
+  border-color: #667eea;
+  color: #ffffff;
+}
+
+.loadingSpinner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #667eea;
+  font-weight: 500;
+}
+
+.loadingSpinner::before {
+  content: '';
+  width: 16px;
+  height: 16px;
+  border: 2px solid #e2e8f0;
+  border-top: 2px solid #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.filterSection {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filterGroup {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .filterBtn {
-  padding: 6px 14px;
+  padding: 8px 16px;
   border-radius: 20px;
   border: 1.5px solid #cbd5e0;
   background: #f7fafc;
@@ -53,44 +138,84 @@
 .filterBtn.tech5gfdd.active { background: #b794f4; border-color: #b794f4; }
 .filterBtn.tech5gtdd.active { background: #76e4f7; border-color: #76e4f7; }
 
-.stats {
-  display: flex;
-  gap: 16px;
-  margin-left: auto;
-  flex-wrap: wrap;
-}
-
-.statBadge {
-  font-size: 12px;
-  color: #718096;
-  background: #edf2f7;
-  padding: 4px 10px;
-  border-radius: 12px;
-}
-
-.statBadge span {
-  font-weight: 600;
-  color: #2d3748;
-}
-
 .mapContainer {
-  width: 100%;
-  height: calc(100vh - 230px);
+  flex: 1;
+  position: relative;
   min-height: 400px;
 }
 
-.loading {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: white;
-  padding: 12px 24px;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+.legend {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.legendSection {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.legendSection h4,
+.legend h4 {
+  margin: 0 0 8px 0;
   font-size: 14px;
+  font-weight: 600;
+  color: #1a202c;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  font-size: 12px;
   color: #4a5568;
+}
+
+.legendColor {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.statsPanel {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 16px;
+  border-radius: 12px;
+  box-shadow: 0 2px 18px rgba(0, 0, 0, 0.16);
   z-index: 1000;
+  min-width: 220px;
+  max-width: 240px;
+}
+
+.statsPanel h4 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a202c;
+}
+
+.statItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+  font-size: 12px;
+  color: #4a5568;
+}
+
+.statTech {
+  font-weight: 500;
+}
+
+.statCount {
+  font-weight: 600;
+  color: #2d3748;
 }
 
 .popup {
@@ -109,6 +234,14 @@
   color: #4a5568;
 }
 
+.popup small {
+  display: block;
+  margin-top: 6px;
+  font-size: 11px;
+  color: #718096;
+  font-style: italic;
+}
+
 .techBadge {
   display: inline-block;
   padding: 2px 7px;
@@ -117,17 +250,4 @@
   font-weight: 600;
   margin: 2px 2px 0 0;
   color: white;
-}
-
-.mapPage {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  height: 100%;        /* ← important */
-}
-
-.mapWrapper {
-  flex: 1;             /* ← important */
-  min-height: 0;       /* ← important */
-  width: 100%;
 }

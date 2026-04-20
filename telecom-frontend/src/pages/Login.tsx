@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import styles from './Login.module.css';
 import authService from '../services/auth.service';
+import logo from '../assets/telcoteclogo.png';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState<string>('');
@@ -26,29 +27,23 @@ const handleSubmit = async (e: React.FormEvent) => {
   setLoading(true);
 
   try {
-    await login(email, password);
+    const loginResult = await login(email, password);
     
-    const userHas2FA = has2FAEnabled();
-    console.log('✅ has2FAEnabled():', userHas2FA);
-    
-    if (userHas2FA) {
+    if (loginResult.requiresOtp) {
       try {
-        // ✅ SET VERIFICATION FLAG BEFORE SENDING OTP
         setVerifyingOTP(true);
-        console.log('✅ 2FA flag set, sending OTP...');
-        
         await sendOtp(email, 'login');
-        console.log('✅ OTP sent, redirecting to verification');
-        
         navigate('/otp-verification', { state: { email } });
         return;
       } catch (otpError: any) {
         console.error('❌ Failed to send OTP:', otpError);
-        setVerifyingOTP(false); // Clear flag on error
+        setVerifyingOTP(false);
+        setError('Failed to send verification code. Please try again.');
       }
+    } else {
+      // No 2FA, user is authenticated
+      navigate('/dashboard');
     }
-    
-    navigate('/dashboard');
     
   } catch (err: any) {
     const errorMessage = err.response?.data?.message || 
@@ -72,11 +67,12 @@ const handleSubmit = async (e: React.FormEvent) => {
     <div className={styles.container}>
       <div className={styles.card}>
         <div className={styles.header}>
-          <h2 className={styles.title}>Telecom GIS Platform</h2>
-          <h3 className={styles.subtitle}>Secure Login</h3>
-          <div className={styles.securityBadge}>
-            <span className={styles.badgeIcon}>🔒</span>
-            <span className={styles.badgeText}>Two-Factor Authentication Ready</span>
+          <div className={styles.logoContainer}>
+            <img src={logo} alt="Telcotec logo" className={styles.logo} />
+          </div>
+          <div className={styles.titleGroup}>
+            <h2 className={styles.title}>Telecom GIS Platform</h2>
+            <h3 className={styles.subtitle}>Secure Login</h3>
           </div>
         </div>
         
@@ -165,11 +161,6 @@ const handleSubmit = async (e: React.FormEvent) => {
             <span className={styles.separatorText}>or</span>
             <span className={styles.separatorLine}></span>
           </div>
-
-          <div className={styles.demoNote}>
-            <span className={styles.noteIcon}>💡</span>
-            <span className={styles.noteText}>Demo users have 2FA enabled</span>
-          </div>
         </form>
 
         <div className={styles.footer}>
@@ -177,36 +168,6 @@ const handleSubmit = async (e: React.FormEvent) => {
             <span className={styles.linkText}>Don't have an account? </span>
             <Link to="/register" className={styles.link}>Register here</Link>
           </div>
-
-          <div className={styles.securityInfo}>
-            <h4 className={styles.securityTitle}>🔒 Security Features:</h4>
-            <ul className={styles.securityList}>
-              <li className={styles.securityItem}>
-                <span className={styles.itemIcon}>✅</span>
-                Two-Factor Authentication
-              </li>
-              <li className={styles.securityItem}>
-                <span className={styles.itemIcon}>✅</span>
-                Secure Password Encryption
-              </li>
-              <li className={styles.securityItem}>
-                <span className={styles.itemIcon}>✅</span>
-                Account Lockout Protection
-              </li>
-            </ul>
-          </div>
-
-<div className={styles.demoCredentials}>
-  <h4 className={styles.demoTitle}>Demo Credentials:</h4>
-  <div className={styles.demoAccount}>
-    <span className={styles.demoLabel}>👑 Admin:</span>
-    <span className={styles.demoText}>admin@telecom.cm / Admin123!</span>
-  </div>
-  <div className={styles.demoAccount}>
-    <span className={styles.demoLabel}>👤 User:</span>
-    <span className={styles.demoText}>test@telecom.cm / Test123!</span>
-  </div>
-</div>
         </div>
       </div>
     </div>

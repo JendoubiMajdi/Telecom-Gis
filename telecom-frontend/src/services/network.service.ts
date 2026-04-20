@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+import api from './api';
 
 export interface NetworkStats {
   technology: string;
@@ -29,7 +27,7 @@ export interface SitesGeoJSON {
 }
 
 export const fetchNetworkStats = async (): Promise<NetworkStats[]> => {
-  const res = await axios.get(`${API_BASE}/network/stats`);
+  const res = await api.get('/network/stats');
   return res.data;
 };
 
@@ -41,11 +39,11 @@ export const fetchSites = async (
     bbox: bbox.join(','),
   };
   if (technology) params.technology = technology;
-  const res = await axios.get(`${API_BASE}/network/sites`, { params });
+  const res = await api.get('/network/sites', { params });
   return res.data;
 };
 
 export const fetchSiteDetail = async (id: number) => {
-  const res = await axios.get(`${API_BASE}/network/sites/${id}`);
+  const res = await api.get(`/network/sites/${id}`);
   return res.data;
 };
