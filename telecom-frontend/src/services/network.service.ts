@@ -26,6 +26,37 @@ export interface SitesGeoJSON {
   features: SiteFeature[];
 }
 
+export interface SiteCell {
+  id: number;
+  technology: string;
+  cell_name: string;
+  cell_index: number;
+  azimuth: number;
+  activity_status: string;
+}
+
+export interface SiteDetail {
+  id: number;
+  site_name: string;
+  region: string;
+  address: string;
+  longitude: number;
+  latitude: number;
+  geometry: {
+    type: 'Point';
+    coordinates: [number, number];
+  };
+  cells: SiteCell[];
+}
+
+export interface UpdateSitePayload {
+  site_name?: string;
+  region?: string;
+  address?: string;
+  longitude?: number;
+  latitude?: number;
+}
+
 export const fetchNetworkStats = async (): Promise<NetworkStats[]> => {
   const res = await api.get('/network/stats');
   return res.data;
@@ -43,7 +74,35 @@ export const fetchSites = async (
   return res.data;
 };
 
-export const fetchSiteDetail = async (id: number) => {
+export interface NewSiteFormValues {
+  site_name: string;
+  region: string;
+  address: string;
+  longitude: number;
+  latitude: number;
+  technology: string;
+  cell_name: string;
+  cell_index: number;
+  azimuth: number;
+  activity_status: string;
+}
+
+export const fetchSiteDetail = async (id: number): Promise<SiteDetail> => {
   const res = await api.get(`/network/sites/${id}`);
+  return res.data;
+};
+
+export const updateSite = async (id: number, payload: UpdateSitePayload) => {
+  const res = await api.put(`/network/sites/${id}`, payload);
+  return res.data;
+};
+
+export const deleteSite = async (id: number) => {
+  const res = await api.delete(`/network/sites/${id}`);
+  return res.data;
+};
+
+export const createSite = async (payload: NewSiteFormValues) => {
+  const res = await api.post('/network/sites', payload);
   return res.data;
 };
