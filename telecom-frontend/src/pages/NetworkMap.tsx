@@ -142,6 +142,8 @@ function MapEventHandler({ activeTech, onSitesLoaded, onLoadingChange, onZoomCha
   }, []);
 
   const load = useCallback(async (bounds: LatLngBounds, force = false) => {
+    // ── Only load when a technology filter is active ──────────────────────────
+    if (!activeTech) { onSitesLoaded([]); return; }
     if (loadingRef.current && !force) return;
     const key = getCacheKey(bounds, activeTech);
     const cached = cacheRef.current.get(key);
@@ -150,7 +152,7 @@ function MapEventHandler({ activeTech, onSitesLoaded, onLoadingChange, onZoomCha
     onLoadingChange(true);
     try {
       const bbox: [number, number, number, number] = [bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()];
-      const data = activeTech ? await fetchSites(bbox, activeTech) : await fetchSites(bbox);
+      const data = await fetchSites(bbox, activeTech);
       cacheRef.current.set(key, { data: data.features, ts: Date.now() });
       if (cacheRef.current.size > 20) cacheRef.current.delete(cacheRef.current.keys().next().value!);
       onSitesLoaded(data.features);
@@ -574,7 +576,11 @@ const NetworkMap: React.FC = () => {
           <div className={styles.titleBadge}>TN</div>
           <div>
             <h2 className={styles.title}>Tunisia Telecom Network</h2>
-            <p className={styles.subtitle}>Live coverage map · {sites.length.toLocaleString()} sites visible</p>
+            <p className={styles.subtitle}>
+              {activeTech
+                ? `${activeTech} · ${sites.length.toLocaleString()} sites visible`
+                : 'Select a technology filter to load sites on the map'}
+            </p>
           </div>
           {loading && <div className={styles.loadingSpinner} />}
         </div>
@@ -617,7 +623,7 @@ const NetworkMap: React.FC = () => {
             {TECHNOLOGIES.map(tech => (
               <button key={tech}
                 className={[styles.filterBtn, styles[TECH_CLASS[tech]] ?? '', activeTech === tech ? styles.active : ''].filter(Boolean).join(' ')}
-                onClick={() => { setLoading(true); setActiveTech(p => p === tech ? null : tech); }}
+                onClick={() => { setActiveTech(p => { if (p === tech) { setSites([]); return null; } setLoading(true); return tech; }); }}
                 title={TECH_LABELS[tech]}
               >
                 <span className={styles.filterDot} style={{ background: TECH_COLORS[tech] }} />
