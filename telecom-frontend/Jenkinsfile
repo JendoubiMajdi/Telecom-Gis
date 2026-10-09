@@ -1,0 +1,144 @@
+// CI for telecom-frontend
+//   build image (React bundle + nginx) -> check the bundle calls /api -> push to Docker Hub
+//   -> bump image.tag in the gitops repo -> Argo CD deploys it
+//
+// Jenkins job: Pipeline script from SCM, repo https://github.com/JendoubiMajdi/Telecom-Gis.git,
+// branch */main, Script Path telecom-frontend/Jenkinsfile
+//
+// Credentials (Manage Jenkins > Credentials, kind "Username with password"):
+//   dockerhub-creds : majdi99 + Docker Hub access token (Read & Write)
+//   github-gitops   : JendoubiMajdi + GitHub token with write access to telecom-gis-gitops
+//
+// The agent needs a Linux shell, git and a Docker CLI that can reach a Docker daemon.
+
+pipeline {
+  agent any
+
+  options {
+    disableConcurrentBuilds()
+    buildDiscarder(logRotator(numToKeepStr: '20'))
+    timeout(time: 30, unit: 'MINUTES')
+  }
+
+  triggers {
+    // GitHub cannot reach a local Jenkins with a webhook, so poll instead
+    pollSCM('H/2 * * * *')
+  }
+
+  environment {
+    APP_DIR       = 'telecom-frontend'
+    IMAGE         = 'docker.io/majdi99/telecom-frontend'
+    // Baked into the bundle at build time; nginx in the pod proxies /api/ to the backend
+    API_URL       = '/api'
+    GITOPS_REPO   = 'https://github.com/JendoubiMajdi/telecom-gis-gitops.git'
+    GITOPS_BRANCH = 'main'
+    VALUES_FILE   = 'charts/frontend/values.yaml'
+  }
+
+  stages {
+    stage('Release') {
+      // Only when frontend files changed, or when started by hand (the first build has no changeset)
+      when {
+        anyOf {
+          changeset 'telecom-frontend/**'
+          triggeredBy 'UserIdCause'
+        }
+      }
+      stages {
+        stage('Version') {
+          steps {
+            script {
+              def sha = sh(script: 'git rev-parse --short=7 HEAD', returnStdout: true).trim()
+              env.TAG = "${env.BUILD_NUMBER}-${sha}"
+              currentBuild.displayName = "#${env.BUILD_NUMBER} ${env.TAG}"
+            }
+          }
+        }
+
+        stage('Build image') {
+          steps {
+            sh 'docker build --pull --build-arg REACT_APP_API_URL="$API_URL" -t "$IMAGE:$TAG" -t "$IMAGE:latest" "$APP_DIR"'
+          }
+        }
+
+        stage('Check bundle') {
+          steps {
+            // Guards against a wrong API URL baked into the bundle (login would silently break)
+            sh '''
+              docker run --rm --entrypoint sh "$IMAGE:$TAG" -c '
+                test -s /usr/share/nginx/html/index.html &&
+                grep -q "baseURL:\\"$0\\"" /usr/share/nginx/html/static/js/main.*.js
+              ' "$API_URL"
+            '''
+          }
+        }
+
+        stage('Push image') {
+          steps {
+            withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+              sh '''
+                echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                docker push "$IMAGE:$TAG"
+                docker push "$IMAGE:latest"
+              '''
+            }
+          }
+          post {
+            always {
+              sh 'docker logout || true'
+            }
+          }
+        }
+
+        stage('Deploy (bump gitops)') {
+          steps {
+            withCredentials([usernamePassword(credentialsId: 'github-gitops', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
+              sh '''
+                set -e
+                # The token is read from the environment by a one-off credential helper,
+                # so it never lands in .git/config or in the build log
+                g() { git -c credential.helper= -c credential.helper='!f() { echo "username=$GIT_USER"; echo "password=$GIT_TOKEN"; }; f' "$@"; }
+
+                SRC_SHA=$(git rev-parse HEAD)
+                rm -rf gitops
+                g clone --branch "$GITOPS_BRANCH" "$GITOPS_REPO" gitops
+                cd gitops
+
+                sed -i "s|^  tag: .*|  tag: \\"$TAG\\"|" "$VALUES_FILE"
+                grep -q "^  tag: \\"$TAG\\"" "$VALUES_FILE"
+                if git diff --quiet; then
+                  echo "$VALUES_FILE already at $TAG, nothing to release"
+                  exit 0
+                fi
+
+                git config user.name "Jenkins CI"
+                git config user.email "jenkins@telecom-gis.local"
+                git commit -am "frontend: release $TAG" -m "Source: https://github.com/JendoubiMajdi/Telecom-Gis/commit/$SRC_SHA"
+
+                # The backend pipeline pushes to the same repo, so rebase and retry on a race
+                for i in 1 2 3; do
+                  if g push origin "HEAD:$GITOPS_BRANCH"; then exit 0; fi
+                  g pull --rebase origin "$GITOPS_BRANCH"
+                done
+                exit 1
+              '''
+            }
+          }
+        }
+      }
+    }
+  }
+
+  post {
+    success {
+      script {
+        if (env.TAG) {
+          echo "Released ${env.IMAGE}:${env.TAG}. Argo CD will roll it out on its next sync."
+        }
+      }
+    }
+    always {
+      sh 'rm -rf gitops; docker image prune -f || true'
+    }
+  }
+}
