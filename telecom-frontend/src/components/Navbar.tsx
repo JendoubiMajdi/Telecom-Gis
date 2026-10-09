@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import styles from './Navbar.module.css';
 import telcotecLogo from '../assets/telcoteclogo.png';
+import NotificationBell from './NotificationBell';
 
 const Navbar: React.FC = () => {
   const { user, logout, isLoading: authLoading } = useAuth();
@@ -115,6 +116,19 @@ const Navbar: React.FC = () => {
             <Link to="/dashboard" className={styles.navLink}>
               Dashboard
             </Link>
+            <Link to="/map" className={styles.navLink}>
+              Map
+            </Link>
+            {(user.role === 'admin' || user.role === 'operator') && (
+              <Link to="/tasks" className={styles.navLink}>
+                Tasks
+              </Link>
+            )}
+            {user.role === 'admin' && (
+              <Link to="/admin" className={styles.navLink}>
+                Admin
+              </Link>
+            )}
             <Link to="/profile" className={styles.navLink}>
               Profile
             </Link>
@@ -135,6 +149,8 @@ const Navbar: React.FC = () => {
                 {isDarkMode ? '☀️' : '🌙'}
               </span>
             </button>
+
+            <NotificationBell />
 
             <button 
               className={styles.userButton}

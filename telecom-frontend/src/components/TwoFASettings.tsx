@@ -298,20 +298,6 @@ const TwoFASettings: React.FC = () => {
         </div>
       </div>
 
-      <div className={styles.infoCard}>
-        <h4 className={styles.infoTitle}>📌 What is 2FA?</h4>
-        <p className={styles.infoText}>
-          Two-factor authentication adds an extra layer of security to your account. 
-          After enabling, you'll need to enter a verification code from your email 
-          each time you log in.
-        </p>
-        <ul className={styles.infoList}>
-          <li>✅ Receive a 6-digit code via email</li>
-          <li>✅ Code expires in 5 minutes</li>
-          <li>✅ Never share your code with anyone</li>
-        </ul>
-      </div>
-
       {showOTPModal && renderOTPModal()}
       {showPasswordModal && renderPasswordModal()}
     </div>

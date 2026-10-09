@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import styles from './Dashboard.module.css';
 
 const Dashboard: React.FC = () => {
-  const { user, isLoading } = useAuth(); // Remove logout from here
+  const { user, isLoading } = useAuth(); 
 
   const getRoleBadgeClass = (role: string) => {
     switch (role) {

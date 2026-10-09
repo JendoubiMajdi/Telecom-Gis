@@ -12,6 +12,8 @@ import { JwtPayload } from '../models/JwtPayload';
 import { generateToken } from '../utils/jwt';
 import { userService } from '../services/user.service';
 import { emailService } from '../utils/emailService';
+import { getUserAuthState, touchLastLogin } from '../services/admin.service';
+import { notifyAdmins } from '../services/notification.service';
 
 
 // Helper function to convert user to response
@@ -123,7 +125,7 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
 
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { email, password, fullName, role = 'viewer' }: RegisterData = req.body;
+    const { email, password, fullName }: RegisterData = req.body;
 
     if (!email || !password || !fullName) {
       res.status(400).json({ 
@@ -148,7 +150,19 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       email,
       password,
       fullName,
-      role: role as 'admin' | 'operator' | 'viewer'
+      // SECURITY: never trust a role sent by the client. Everyone starts as 'viewer';
+      // only an admin can promote a user.
+      role: 'viewer'
+    });
+
+    // New accounts start as viewers — let the admins know so they can review the role
+    await notifyAdmins({
+      type: 'user.registered',
+      title: 'New user registered',
+      message: `${user.fullName || user.email} (${user.email}) just registered as a viewer. Review their role in Administration.`,
+      link: '/admin',
+      entityType: 'user',
+      entityId: user.id,
     });
 
     const tokenPayload: JwtPayload = {
@@ -214,6 +228,17 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       });
       return;
     }
+
+    // Refuse deactivated accounts with a clear message, and record the login time
+    const authState = await getUserAuthState(user.id!);
+    if (authState && !authState.isActive) {
+      res.status(403).json({
+        success: false,
+        message: 'This account has been deactivated. Please contact an administrator.'
+      });
+      return;
+    }
+    await touchLastLogin(user.id!);
 
     const tokenPayload: JwtPayload = {
       userId: user.id!,
@@ -311,18 +336,23 @@ export const sendOtp = async (req: Request, res: Response): Promise<void> => {
     
     // Send OTP via email
     const emailSent = await emailService.sendOtpEmail(email, otp, purpose);
-    
-    // Log to console if email failed (for development)
-    if (!emailSent && process.env.NODE_ENV !== 'production') {
-      console.log(`📧 [DEV] OTP for ${email}: ${otp} (Purpose: ${purpose})`);
+
+    // Only for local debugging: set EXPOSE_DEV_OTP=true in .env (never in production)
+    const exposeDev = process.env.EXPOSE_DEV_OTP === 'true' && process.env.NODE_ENV !== 'production';
+
+    if (!emailSent && !exposeDev) {
+      res.status(502).json({
+        success: false,
+        message: 'We could not send the verification email. Please try again later.'
+      });
+      return;
     }
 
     res.status(200).json({
       success: true,
-      message: 'OTP sent successfully',
+      message: emailSent ? 'OTP sent to your email' : 'OTP generated (email not sent - dev mode)',
       data: {
-        // Only include OTP in non-production for testing
-        otp: process.env.NODE_ENV !== 'production' ? otp : undefined
+        otp: exposeDev ? otp : undefined
       }
     });
 
@@ -435,20 +465,24 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
     
     // Send reset email
     const emailSent = await emailService.sendResetEmail(email, resetLink);
-    
-    // Log to console if email failed
-    if (!emailSent && process.env.NODE_ENV !== 'production') {
-      console.log(`📧 [DEV] Reset link for ${email}: ${resetLink}`);
+
+    // Only for local debugging: set EXPOSE_DEV_OTP=true in .env (never in production)
+    const exposeDev = process.env.EXPOSE_DEV_OTP === 'true' && process.env.NODE_ENV !== 'production';
+
+    if (!emailSent && !exposeDev) {
+      res.status(502).json({
+        success: false,
+        message: 'We could not send the reset email. Please try again later.'
+      });
+      return;
     }
 
     res.status(200).json({
       success: true,
-      message: 'Password reset instructions sent',
+      message: 'If an account exists with this email, a reset link has been sent',
       data: {
-        // In production, don't send token in response
-        // For demo only:
-        resetToken: process.env.NODE_ENV !== 'production' ? resetToken : undefined,
-        resetLink: process.env.NODE_ENV !== 'production' ? resetLink : undefined
+        resetToken: exposeDev ? resetToken : undefined,
+        resetLink: exposeDev ? resetLink : undefined
       }
     });
 

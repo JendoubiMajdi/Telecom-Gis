@@ -98,8 +98,25 @@
   .container {
     padding: 10px;
   }
-  
+
   .card {
     padding: 15px;
   }
+}
+
+/* ── Layout height rules (required for map to fill screen) ── */
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.App {
+  height: 100%;
+}
+
+.layout-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }

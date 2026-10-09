@@ -229,19 +229,38 @@ createUser: async (userData: CreateUserInput): Promise<User> => {
   // Verify OTP
   verifyOtp: async (email: string, otp: string): Promise<boolean> => {
     try {
-      // Find valid OTP (not expired, not used)
+      const cleanEmail = String(email).trim();
+      const cleanOtp = String(otp).trim();
+
+      // Find valid OTP (not expired, not used). Email compared case-insensitively.
       const result = await pool.query(
         `SELECT id FROM otp_codes 
-         WHERE email = $1 
+         WHERE LOWER(email) = LOWER($1) 
          AND otp_code = $2 
          AND expires_at > CURRENT_TIMESTAMP 
-         AND used = false
+         AND used = false 
          ORDER BY created_at DESC 
          LIMIT 1`,
-        [email, otp]
+        [cleanEmail, cleanOtp]
       );
 
       if (result.rows.length === 0) {
+        // Diagnostic: explain WHY it failed (does not print any code values)
+        const dbg = await pool.query(
+          `SELECT (otp_code = $2) AS code_match,
+                  used,
+                  (expires_at > CURRENT_TIMESTAMP) AS not_expired
+           FROM otp_codes
+           WHERE LOWER(email) = LOWER($1)
+           ORDER BY created_at DESC
+           LIMIT 5`,
+          [cleanEmail, cleanOtp]
+        );
+        console.warn(
+          `⚠️ verifyOtp failed for ${cleanEmail}: received ${cleanOtp.length}-digit code; ` +
+          `${dbg.rows.length} recent code(s) on file ->`,
+          JSON.stringify(dbg.rows)
+        );
         return false;
       }
 
