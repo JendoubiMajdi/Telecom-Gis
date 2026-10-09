@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import Navbar from './components/Navbar';
-import PrivateRoute, { AdminRoute } from './components/PrivateRoute';
+import PrivateRoute, { AdminRoute, StaffRoute } from './components/PrivateRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import OTPVerification from './pages/OTPVerification';
@@ -13,6 +13,8 @@ import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import Footer from './components/Footer';
 import NetworkMap from './pages/NetworkMap';
+import AdminDashboard from './pages/AdminDashboard';
+import Tasks from './pages/Tasks';
 import './App.css';
 
 const App: React.FC = () => {
@@ -55,11 +57,35 @@ const App: React.FC = () => {
               } />
 
               <Route path="/map" element={
-                <AdminRoute>
+                <PrivateRoute>
                   <div className="layout-container">
                     <Navbar />
                     <main className="main-content">
                       <NetworkMap />
+                    </main>
+                    <Footer />
+                  </div>
+                </PrivateRoute>
+              } />
+
+              <Route path="/tasks" element={
+                <StaffRoute>
+                  <div className="layout-container">
+                    <Navbar />
+                    <main className="main-content">
+                      <Tasks />
+                    </main>
+                    <Footer />
+                  </div>
+                </StaffRoute>
+              } />
+
+              <Route path="/admin" element={
+                <AdminRoute>
+                  <div className="layout-container">
+                    <Navbar />
+                    <main className="main-content">
+                      <AdminDashboard />
                     </main>
                     <Footer />
                   </div>

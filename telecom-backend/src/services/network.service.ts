@@ -195,39 +195,38 @@ export interface UpdateSiteParams {
 
 export const updateSite = async (params: UpdateSiteParams) => {
   const fields: string[] = [];
-  const values: Array<string | number> = [];
+  const values: Array<string | number | null> = [];
 
-  if (params.site_name !== undefined) {
-    fields.push('site_name = $' + (fields.length + 1));
-    values.push(params.site_name);
-  }
-  if (params.region !== undefined) {
-    fields.push('region = $' + (fields.length + 1));
-    values.push(params.region);
-  }
-  if (params.address !== undefined) {
-    fields.push('address = $' + (fields.length + 1));
-    values.push(params.address);
-  }
-  if (params.longitude !== undefined) {
-    fields.push('longitude = $' + (fields.length + 1));
-    values.push(params.longitude);
-  }
-  if (params.latitude !== undefined) {
-    fields.push('latitude = $' + (fields.length + 1));
-    values.push(params.latitude);
-  }
+  const addField = (column: string, value: string | number) => {
+    values.push(value);
+    fields.push(`${column} = $${values.length}`);
+  };
+
+  if (params.site_name !== undefined) addField('site_name', params.site_name);
+  if (params.region    !== undefined) addField('region', params.region);
+  if (params.address   !== undefined) addField('address', params.address);
+  if (params.longitude !== undefined) addField('longitude', params.longitude);
+  if (params.latitude  !== undefined) addField('latitude', params.latitude);
 
   if (fields.length === 0) {
     throw new Error('No site fields provided to update');
   }
 
-  // If coordinates changed, also update the PostGIS location column
+  // If coordinates changed, also rebuild the PostGIS location column.
+  // IMPORTANT: use DEDICATED parameters (not the ones used for the longitude/latitude
+  // columns above). Reusing the same $n in a numeric column assignment and in
+  // ST_MakePoint(float8) makes PostgreSQL fail with
+  // "inconsistent types deduced for parameter $n".
   if (params.longitude !== undefined || params.latitude !== undefined) {
+    values.push(params.longitude ?? null);
+    const lngIdx = values.length;
+    values.push(params.latitude ?? null);
+    const latIdx = values.length;
+
     fields.push(
       `location = ST_SetSRID(ST_MakePoint(
-        COALESCE($${values.indexOf(params.longitude!) + 1}, longitude),
-        COALESCE($${values.indexOf(params.latitude!) + 1}, latitude)
+        COALESCE($${lngIdx}::float8, longitude::float8),
+        COALESCE($${latIdx}::float8, latitude::float8)
       ), 4326)`
     );
   }

@@ -24,7 +24,9 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     const status = error?.response?.status;
-    if (status === 401) {
+    // 401 = invalid/expired token. 403 + ACCOUNT_DISABLED = an admin deactivated this account.
+    const accountDisabled = status === 403 && error?.response?.data?.code === 'ACCOUNT_DISABLED';
+    if (status === 401 || accountDisabled) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       if (window.location.pathname !== '/login') {

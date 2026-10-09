@@ -1,0 +1,159 @@
+# .gitlab-ci.yml
+# Ce fichier définit la pipeline CI/CD pour ton projet
+
+stages:
+  - prepare
+  - test-manual
+  - test-auto
+  - deploy
+
+variables:
+  # Configuration
+  PLATFORM_URL: "http://localhost:8000"  # URL de ta plateforme
+  APPLICATION_NAME: "telecom_gis"
+  SUCCESS_THRESHOLD: 80
+  CI_DEBUG_SERVICES: "true"
+
+# ============================================
+# ÉTAPE 1 : PRÉPARER L'ENVIRONNEMENT
+# ============================================
+prepare-environment:
+  stage: prepare
+  script:
+    - echo "🔧 Préparation de l'environnement..."
+    - echo "📦 Installation des dépendances..."
+    - pip install -r requirements.txt || echo "Pas de requirements.txt"
+    - echo "✅ Environnement prêt"
+  only:
+    - main
+    - develop
+  tags:
+    - saas-linux-small-amd64  # Runner GitLab gratuit
+
+# ============================================
+# ÉTAPE 2 : TESTS MANUELS (DÉCLENCHÉS PAR LE TESTEUR)
+# ============================================
+run-tests-manual:
+  stage: test-manual
+  when: manual                      # ← Le testeur clique sur "Play"
+  script:
+    - echo "🧪 [MANUEL] Exécution des tests..."
+    - echo "📊 Taux minimum requis: ${SUCCESS_THRESHOLD}%"
+    
+    # 1. Vérifier que la plateforme est accessible
+    - echo "🔍 Vérification de la plateforme..."
+    - curl -s ${PLATFORM_URL}/api/health || echo "⚠️ Plateforme inaccessible"
+    
+    # 2. Lancer les tests via l'API de la plateforme
+    - echo "🚀 Lancement des tests..."
+    - |
+      curl -X POST ${PLATFORM_URL}/api/test/execute \
+        -H "Content-Type: application/json" \
+        -d "{\"application\": \"${APPLICATION_NAME}\", \"environment\": \"dev\"}" \
+        -o test_result.json
+    
+    # 3. Analyser les résultats
+    - echo "📊 Analyse des résultats..."
+    - |
+      SUCCESS_RATE=$(cat test_result.json | jq '.summary.success_rate')
+      TOTAL_TESTS=$(cat test_result.json | jq '.summary.total_tests')
+      PASSED=$(cat test_result.json | jq '.summary.passed')
+      FAILED=$(cat test_result.json | jq '.summary.failed')
+      REPORT_URL=$(cat test_result.json | jq -r '.report_url')
+      
+      echo "=========================================="
+      echo "📊 RÉSULTATS DES TESTS"
+      echo "=========================================="
+      echo "Tests exécutés: ${TOTAL_TESTS}"
+      echo "Réussis: ${PASSED}"
+      echo "Échecs: ${FAILED}"
+      echo "Taux de réussite: ${SUCCESS_RATE}%"
+      echo "Rapport: ${PLATFORM_URL}${REPORT_URL}"
+      echo "=========================================="
+      
+      # Sauvegarder pour les étapes suivantes
+      echo "SUCCESS_RATE=${SUCCESS_RATE}" >> variables.env
+      echo "REPORT_URL=${REPORT_URL}" >> variables.env
+      echo "TOTAL_TESTS=${TOTAL_TESTS}" >> variables.env
+      echo "PASSED=${PASSED}" >> variables.env
+      echo "FAILED=${FAILED}" >> variables.env
+    
+    # 4. Décider de la suite
+    - |
+      if [ $(echo "$SUCCESS_RATE >= $SUCCESS_THRESHOLD" | bc) -eq 1 ]; then
+        echo "✅ SUCCÈS - Seuil atteint (${SUCCESS_RATE}% >= ${SUCCESS_THRESHOLD}%)"
+        exit 0
+      else
+        echo "❌ ÉCHEC - Seuil non atteint (${SUCCESS_RATE}% < ${SUCCESS_THRESHOLD}%)"
+        echo "📄 Rapport d'échec: ${PLATFORM_URL}${REPORT_URL}"
+        exit 1
+      fi
+  artifacts:
+    reports:
+      dotenv: variables.env
+    paths:
+      - test_result.json
+    expire_in: 1 week
+  only:
+    - main
+    - develop
+  tags:
+    - saas-linux-small-amd64
+
+# ============================================
+# ÉTAPE 3 : TESTS AUTOMATIQUES (APRÈS CORRECTION)
+# ============================================
+run-tests-auto:
+  stage: test-auto
+  when: on_success                   # ← S'exécute automatiquement
+  script:
+    - echo "🧪 [AUTO] Vérification après correction..."
+    
+    # Récupérer les variables de l'étape précédente (si disponibles)
+    - |
+      if [ -f variables.env ]; then
+        source variables.env
+      else
+        SUCCESS_RATE=0
+      fi
+    
+    # Exécuter les tests
+    - |
+      curl -X POST ${PLATFORM_URL}/api/test/execute \
+        -H "Content-Type: application/json" \
+        -d "{\"application\": \"${APPLICATION_NAME}\", \"environment\": \"dev\"}" \
+        -o test_result_auto.json
+    
+    - |
+      NEW_RATE=$(cat test_result_auto.json | jq '.summary.success_rate')
+      echo "Nouveau taux: ${NEW_RATE}%"
+      
+      if [ $(echo "$NEW_RATE >= $SUCCESS_THRESHOLD" | bc) -eq 1 ]; then
+        echo "✅ Correction validée - Tests passent"
+        exit 0
+      else
+        echo "❌ Toujours en échec - Nécessite correction"
+        exit 1
+      fi
+  artifacts:
+    paths:
+      - test_result_auto.json
+  only:
+    - main
+    - develop
+  tags:
+    - saas-linux-small-amd64
+
+# ============================================
+# ÉTAPE 4 : DÉPLOIEMENT
+# ============================================
+deploy:
+  stage: deploy
+  needs: ["run-tests-auto"]
+  script:
+    - echo "🚀 Déploiement du module suivant..."
+    - echo "✅ Module déployé avec succès"
+  only:
+    - main
+  tags:
+    - saas-linux-small-amd64

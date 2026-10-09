@@ -1,9 +1,6 @@
 import { Request, Response } from 'express';
-import { checkPoiCoverage, PoiPoint } from '../services/poi.service';
+import { checkPoiCoverage, PoiPoint } from '../services/poi.service'; 
 
-// ── POST /api/poi/check ────────────────────────────────────────────────────────
-// Body: { pois: PoiPoint[], radiusKm: number }
-// Browser fetches POIs from Overpass, sends them here for PostGIS coverage check
 export const poiCheckHandler = async (req: Request, res: Response): Promise<void> => {
   try {
     const { pois, radiusKm } = req.body;

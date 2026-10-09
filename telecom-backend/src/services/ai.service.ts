@@ -1,4 +1,5 @@
 import pool from '../db/database';
+import { buildRuleBasedRecommendation } from './ruleBasedRecommendation';
 
 // ── IDEA 2: Coverage Gap Predictor ─────────────────────────────────────────────
 export interface GapZone {
@@ -182,10 +183,10 @@ export const getSiteAnalysisData = async (siteId: number): Promise<SiteAnalysisD
       latitude:       parseFloat(site.latitude),
       longitude:      parseFloat(site.longitude),
       cell_count:     parseInt(site.cell_count),
-      technologies:   site.technologies,
+      technologies:   site.technologies ?? [],
       active_cells:   parseInt(site.active_cells),
       inactive_cells: parseInt(site.inactive_cells),
-      azimuths:       site.azimuths,
+      azimuths:       (site.azimuths ?? []).filter((a: unknown) => a !== null),
     },
     neighbors: neighborResult.rows.map(n => ({
       site_name:    n.site_name,
@@ -198,7 +199,7 @@ export const getSiteAnalysisData = async (siteId: number): Promise<SiteAnalysisD
       total_sites:        parseInt(rs.total_sites),
       sites_with_4g:      parseInt(rs.sites_with_4g),
       sites_with_5g:      parseInt(rs.sites_with_5g),
-      avg_cells_per_site: parseFloat(rs.avg_cells_per_site),
+      avg_cells_per_site: parseFloat(rs.avg_cells_per_site) || 0,
     },
   };
 };
@@ -207,13 +208,20 @@ export const getSiteAnalysisData = async (siteId: number): Promise<SiteAnalysisD
 // ── Claude API call — server-side, key never exposed to browser ────────────────
 export const getUpgradeRecommendation = async (
   siteId: number
-): Promise<{ recommendation: string; analysisData: SiteAnalysisData }> => {
+): Promise<{ recommendation: string; analysisData: SiteAnalysisData; source: 'claude' | 'rule-based' }> => {
 
   const analysisData = await getSiteAnalysisData(siteId);
-  if (!analysisData) throw new Error('Site not found');
+  if (!analysisData) throw new Error('Site not found (or it has no cells to analyse)');
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error('ANTHROPIC_API_KEY is not set in .env');
+  if (!apiKey) {
+    // No API key configured → use the built-in rule-based engine instead of failing.
+    return {
+      recommendation: buildRuleBasedRecommendation(analysisData),
+      analysisData,
+      source: 'rule-based',
+    };
+  }
 
   const { site, neighbors, regionStats } = analysisData;
   const total = regionStats.total_sites || 1;
@@ -262,7 +270,8 @@ Be concise and practical. No intro or conclusion outside these sections.`;
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
+      // Model is configurable: set ANTHROPIC_MODEL in .env to override
+      model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5',
       max_tokens: 600,
       messages: [{ role: 'user', content: prompt }],
     }),
@@ -282,5 +291,5 @@ Be concise and practical. No intro or conclusion outside these sections.`;
     .map(b => b.text ?? '')
     .join('');
 
-  return { recommendation, analysisData };
+  return { recommendation, analysisData, source: 'claude' };
 };

@@ -7,6 +7,14 @@ import {
   updateSite as updateSiteService,
   deleteSite as deleteSiteService,
 } from '../services/network.service';
+import { logAudit } from '../services/audit.service';
+import { notifyAdmins } from '../services/notification.service';
+import { AuthRequest } from '../models/AuthRequest';
+
+const actorOf = (req: Request): { id: string | undefined; name: string } => {
+  const r = req as AuthRequest;
+  return { id: r.userId, name: r.user?.email ?? 'An administrator' };
+};
 
 // ── GET /api/network/sites?bbox=lng1,lat1,lng2,lat2&technology=4G ──
 export const getSites = async (req: Request, res: Response): Promise<void> => {
@@ -130,6 +138,33 @@ export const createSite = async (req: Request, res: Response): Promise<void> => 
       activity_status: activity_status || 'active',
     });
 
+    await logAudit(req, {
+      action: 'site.create',
+      entityType: 'site',
+      entityId: result.siteId,
+      details: {
+        site_name: String(site_name).trim(),
+        region: region ? String(region).trim() : '',
+        technology,
+        cell_name: String(cell_name).trim(),
+        longitude: lng,
+        latitude: lat,
+      },
+    });
+
+    const actor = actorOf(req);
+    await notifyAdmins(
+      {
+        type: 'site.create',
+        title: 'Site added',
+        message: `${actor.name} added "${String(site_name).trim()}" (${technology}${region ? ', ' + String(region).trim() : ''})`,
+        link: `/map?site=${result.siteId}`,
+        entityType: 'site',
+        entityId: result.siteId,
+      },
+      actor.id
+    );
+
     res.status(201).json({ message: 'Site and cell created successfully', ...result });
   } catch (err: any) {
     console.error('createSite error:', err);
@@ -165,6 +200,19 @@ export const updateSiteHandler = async (req: Request, res: Response): Promise<vo
     }
 
     const { site_name, region, address, longitude, latitude } = req.body;
+
+    if (longitude != null && (isNaN(Number(longitude)) || Math.abs(Number(longitude)) > 180)) {
+      res.status(400).json({ error: 'longitude must be a number between -180 and 180' });
+      return;
+    }
+    if (latitude != null && (isNaN(Number(latitude)) || Math.abs(Number(latitude)) > 90)) {
+      res.status(400).json({ error: 'latitude must be a number between -90 and 90' });
+      return;
+    }
+
+    // Snapshot before the change so the audit log can store before/after values.
+    const before = await getSiteDetail(siteId);
+
     const updated = await updateSiteService({
       id: siteId,
       site_name,
@@ -173,6 +221,53 @@ export const updateSiteHandler = async (req: Request, res: Response): Promise<vo
       longitude: longitude != null ? Number(longitude) : undefined,
       latitude:  latitude  != null ? Number(latitude)  : undefined,
     });
+
+    if (!updated) {
+      res.status(404).json({ error: 'Site not found' });
+      return;
+    }
+
+    // Log only the fields that really changed.
+    const fields = ['site_name', 'region', 'address', 'longitude', 'latitude'] as const;
+    const changes: Record<string, { from: unknown; to: unknown }> = {};
+    for (const f of fields) {
+      const from = before?.[f];
+      const to = updated[f];
+      const same = (f === 'longitude' || f === 'latitude')
+        ? Number(from) === Number(to)
+        : (from ?? '') === (to ?? '');
+      if (!same) changes[f] = { from: from ?? null, to: to ?? null };
+    }
+    await logAudit(req, {
+      action: 'site.update',
+      entityType: 'site',
+      entityId: siteId,
+      details: { site_name: updated.site_name, changes },
+    });
+
+    // Only notify when something really changed
+    if (Object.keys(changes).length > 0) {
+      const actor = actorOf(req);
+      const parts: string[] = [];
+      for (const [field, c] of Object.entries(changes)) {
+        if (field === 'longitude' || field === 'latitude') {
+          if (!parts.includes('location moved')) parts.push('location moved');
+        } else {
+          parts.push(`${field}: ${c.from ?? '∅'} → ${c.to ?? '∅'}`);
+        }
+      }
+      await notifyAdmins(
+        {
+          type: 'site.update',
+          title: 'Site updated',
+          message: `${actor.name} edited "${updated.site_name}" — ${parts.join(', ')}`.slice(0, 220),
+          link: `/map?site=${siteId}`,
+          entityType: 'site',
+          entityId: siteId,
+        },
+        actor.id
+      );
+    }
 
     res.json({ message: 'Site updated', site: updated });
   } catch (err: any) {
@@ -190,7 +285,39 @@ export const deleteSiteHandler = async (req: Request, res: Response): Promise<vo
       return;
     }
 
+    // Snapshot before deletion so the log keeps what was removed.
+    const before = await getSiteDetail(siteId);
+    if (!before) {
+      res.status(404).json({ error: 'Site not found' });
+      return;
+    }
+
     const deleted = await deleteSiteService(siteId);
+
+    await logAudit(req, {
+      action: 'site.delete',
+      entityType: 'site',
+      entityId: siteId,
+      details: {
+        site_name: before.site_name,
+        region: before.region,
+        cells_deleted: before.cells?.length ?? 0,
+      },
+    });
+
+    const actor = actorOf(req);
+    await notifyAdmins(
+      {
+        type: 'site.delete',
+        title: 'Site deleted',
+        message: `${actor.name} deleted "${before.site_name}" (${before.cells?.length ?? 0} cells removed)`,
+        link: null,                       // the site no longer exists
+        entityType: 'site',
+        entityId: siteId,
+      },
+      actor.id
+    );
+
     res.json({ message: 'Site deleted', ...deleted });
   } catch (err: any) {
     console.error('deleteSite error:', err);

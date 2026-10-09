@@ -1,0 +1,195 @@
+/* Admin dashboard — uses the app's theme variables so light/dark both work */
+.page {
+  max-width: 1300px;
+  margin: 0 auto;
+  padding: 24px 20px 40px;
+  color: var(--text-color);
+}
+
+.header { margin-bottom: 18px; }
+.title { margin: 0 0 4px; font-size: 26px; font-weight: 700; }
+.subtitle { margin: 0; color: var(--text-secondary); font-size: 14px; }
+
+/* Notice */
+.notice {
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  border: 1px solid transparent;
+}
+.ok    { background: rgba(39, 174, 96, 0.12); border-color: rgba(39, 174, 96, 0.4); color: var(--success-color); }
+.error { background: rgba(231, 76, 60, 0.12); border-color: rgba(231, 76, 60, 0.4); color: var(--error-color); }
+
+/* Summary cards */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+}
+.card {
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 16px 18px;
+  box-shadow: var(--card-shadow);
+}
+.cardLabel {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+.cardValue { font-size: 30px; font-weight: 700; line-height: 1.1; }
+.cardSub { margin-top: 6px; font-size: 12px; color: var(--text-secondary); min-height: 16px; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  background: var(--background-color);
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 13px;
+  text-transform: capitalize;
+}
+.chip strong { margin-left: 4px; color: var(--primary-color); }
+
+.topList { list-style: none; margin: 0; padding: 0; font-size: 13px; }
+.topList li { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; }
+.topList span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Tabs */
+.tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+.tab {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+}
+.tab:hover { background: var(--hover-color); }
+.tabActive {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+  color: #fff;
+}
+.tabActive:hover { background: var(--primary-color); }
+
+/* Panel / toolbar */
+.panel {
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: var(--card-shadow);
+  padding: 14px;
+}
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.searchInput, .select, .roleSelect {
+  background: var(--input-bg);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 14px;
+}
+.searchInput { min-width: 240px; flex: 1; max-width: 360px; }
+.roleSelect { padding: 5px 8px; text-transform: capitalize; }
+.roleSelect:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* Table */
+.tableWrap { overflow-x: auto; }
+.table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.table th {
+  text-align: left;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-color);
+  white-space: nowrap;
+}
+.table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-color);
+  vertical-align: top;
+}
+.table tbody tr:hover { background: var(--hover-color); }
+.rowInactive { opacity: 0.6; }
+.empty { text-align: center; color: var(--text-secondary); padding: 28px 12px !important; }
+
+.userName { font-weight: 600; }
+.userEmail { font-size: 13px; color: var(--text-secondary); word-break: break-all; }
+.youTag {
+  font-size: 10px;
+  background: var(--primary-color);
+  color: #fff;
+  border-radius: 999px;
+  padding: 1px 7px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.muted { color: var(--text-secondary); font-size: 13px; }
+.details { font-size: 13px; max-width: 460px; word-break: break-word; }
+
+/* Badges */
+.badge, .actionBadge {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.badgeActive   { background: rgba(39, 174, 96, 0.15);  color: var(--success-color); }
+.badgeInactive { background: rgba(231, 76, 60, 0.15);  color: var(--error-color); }
+
+.actionCreate { background: rgba(39, 174, 96, 0.15);  color: var(--success-color); }
+.actionUpdate { background: rgba(52, 152, 219, 0.15); color: var(--primary-color); }
+.actionDelete { background: rgba(231, 76, 60, 0.15);  color: var(--error-color); }
+.actionUser   { background: rgba(243, 156, 18, 0.15); color: var(--warning-color); }
+
+/* Buttons */
+.btn {
+  background: var(--background-color);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-left: 6px;
+}
+.toolbar .btn:first-of-type { margin-left: 0; }
+.btn:hover:not(:disabled) { background: var(--hover-color); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btnDanger  { color: var(--error-color);   border-color: rgba(231, 76, 60, 0.45); }
+.btnSuccess { color: var(--success-color); border-color: rgba(39, 174, 96, 0.45); }
+
+/* Pager */
+.pager {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+@media (max-width: 700px) {
+  .page { padding: 16px 12px 32px; }
+  .searchInput { min-width: 0; max-width: none; }
+}

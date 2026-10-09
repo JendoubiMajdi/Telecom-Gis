@@ -37,4 +37,23 @@ export const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
   return <>{children}</>;
 };
 
+// Admins and operators only (viewers are sent back to the dashboard)
+export const StaffRoute: React.FC<AdminRouteProps> = ({ children }) => {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
+  if (!user) {
+    return <Navigate to="/login" />;
+  }
+
+  if (user.role !== 'admin' && user.role !== 'operator') {
+    return <Navigate to="/dashboard" />;
+  }
+
+  return <>{children}</>;
+};
+
 export default PrivateRoute;

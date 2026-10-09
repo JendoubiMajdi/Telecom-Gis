@@ -17,6 +17,8 @@ const Profile: React.FC = () => {
   });
   
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
+  // Stored picture (what is currently saved) vs. what is displayed (may be pending)
+  const [savedPicture, setSavedPicture] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -31,12 +33,13 @@ const Profile: React.FC = () => {
         confirmPassword: ''
       });
       
-      const savedPicture = localStorage.getItem(`profile_picture_${user.id}`);
-      if (savedPicture) {
-        setProfilePicture(savedPicture);
-      }
+      const stored = localStorage.getItem(`profile_picture_${user.id}`);
+      setSavedPicture(stored);
+      setProfilePicture(stored);
     }
   }, [user]);
+
+  const pictureChanged = profilePicture !== savedPicture;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -52,24 +55,31 @@ const Profile: React.FC = () => {
       const reader = new FileReader();
       reader.onloadend = () => {
         const result = reader.result as string;
+        // Only stage the picture; it is persisted when "Save Changes" is clicked
         setProfilePicture(result);
-        
-        if (user) {
-          localStorage.setItem(`profile_picture_${user.id}`, result);
-          window.dispatchEvent(new Event('storage'));
-          console.log('📸 Profile picture updated and event triggered');
-        }
       };
       reader.readAsDataURL(file);
     }
   };
 
   const handleRemovePicture = () => {
+    // Staged removal; applied on "Save Changes"
     setProfilePicture(null);
-    if (user) {
-      localStorage.removeItem(`profile_picture_${user.id}`);
-      window.dispatchEvent(new Event('storage'));
-      console.log('🗑️ Profile picture removed and event triggered');
+  };
+
+  const persistPicture = () => {
+    if (!user) return;
+    const key = `profile_picture_${user.id}`;
+    try {
+      if (profilePicture) {
+        localStorage.setItem(key, profilePicture);
+      } else {
+        localStorage.removeItem(key);
+      }
+      setSavedPicture(profilePicture);
+      window.dispatchEvent(new Event('storage')); // refresh Navbar avatar
+    } catch {
+      throw new Error('Image is too large to store. Please choose a smaller image.');
     }
   };
 
@@ -109,15 +119,19 @@ const Profile: React.FC = () => {
         updateData.newPassword = formData.newPassword;
       }
 
-      if (Object.keys(updateData).length === 0) {
+      if (Object.keys(updateData).length === 0 && !pictureChanged) {
         setError('No changes to update');
         setIsLoading(false);
         return;
       }
 
-      console.log(' Sending update data:', updateData);
-      
-      const response = await updateProfile(updateData);
+      let response: any = null;
+      if (Object.keys(updateData).length > 0) {
+        response = await updateProfile(updateData);
+      }
+      if (pictureChanged) {
+        persistPicture();
+      }
       
       setMessage('Profile updated successfully!');
       

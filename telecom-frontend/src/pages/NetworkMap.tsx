@@ -1,4 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import {
   MapContainer,
   TileLayer,
@@ -175,6 +177,123 @@ function MapEventHandler({ activeTech, onSitesLoaded, onLoadingChange, onZoomCha
   return null;
 }
 
+// ── "Open on map": cinematic fly-in to a site ───────────────────────────────────
+// URL /map?site=ID (used by task "Open on map" and by notification links):
+//   1. the map flies from wherever it is to the site (zoom out → in, ~2.6 s)
+//   2. when it lands, pulsing rings appear around the site
+//   3. the site's popup opens by itself (see handleLanded + Marker ref below)
+const FOCUS_STYLE_ID = 'site-focus-styles';
+
+// Styles for the pulse live here so this feature is self-contained (Leaflet divIcons
+// cannot use CSS-module class names).
+const ensureFocusStyles = () => {
+  if (document.getElementById(FOCUS_STYLE_ID)) return;
+  const el = document.createElement('style');
+  el.id = FOCUS_STYLE_ID;
+  el.textContent = `
+    .site-focus { position: relative; width: 0; height: 0; pointer-events: none; }
+    .site-focus .ring {
+      position: absolute; left: -34px; top: -34px; width: 68px; height: 68px;
+      border-radius: 50%; border: 3px solid #f59e0b; background: rgba(245, 158, 11, 0.22);
+      opacity: 0; transform: scale(0.2);
+      animation: siteFocusPulse 1.8s ease-out 5;
+    }
+    .site-focus .ring.r2 { animation-delay: 0.6s; }
+    .site-focus .ring.r3 { animation-delay: 1.2s; }
+    .site-focus .dot {
+      position: absolute; left: -6px; top: -6px; width: 12px; height: 12px; border-radius: 50%;
+      background: #f59e0b; box-shadow: 0 0 0 3px #ffffff, 0 0 18px 6px rgba(245, 158, 11, 0.85);
+      animation: siteFocusPop 0.55s cubic-bezier(0.2, 1.7, 0.4, 1) both;
+    }
+    @keyframes siteFocusPulse {
+      0%   { transform: scale(0.2); opacity: 0.95; }
+      100% { transform: scale(1.7); opacity: 0; }
+    }
+    @keyframes siteFocusPop {
+      from { transform: scale(0); }
+      to   { transform: scale(1); }
+    }
+  `;
+  document.head.appendChild(el);
+};
+
+const focusIcon = L.divIcon({
+  className: 'site-focus-wrap',
+  html: '<div class="site-focus"><span class="ring"></span><span class="ring r2"></span><span class="ring r3"></span><span class="dot"></span></div>',
+  iconSize: [0, 0],
+  iconAnchor: [0, 0],
+});
+
+function FocusSite({ onFocus, onLanded }: { onFocus: (techs: string[]) => void; onLanded: (id: number) => void }) {
+  const map = useMap();
+  const [params, setParams] = useSearchParams();
+  const siteParam = params.get('site');
+  const [focus, setFocus] = useState<[number, number] | null>(null);
+  const alive = useRef(true);
+
+  useEffect(() => {
+    alive.current = true;
+    return () => { alive.current = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!siteParam) return;
+    const id = Number(siteParam);
+    if (!Number.isFinite(id)) return;
+    ensureFocusStyles();
+
+    fetchSiteDetail(id)
+      .then(site => {
+        if (!alive.current) return;
+        const lat = Number(site.latitude);
+        const lng = Number(site.longitude);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+
+        // Sites only appear on the map when a technology filter is on, so make sure one
+        // that matches this site is active (otherwise the pin and popup would not show).
+        onFocus(Array.from(new Set((site.cells ?? []).map(c => c.technology))));
+
+        setFocus(null);
+        const TARGET_ZOOM = 17;
+        let landed = false;
+        const land = () => {
+          if (landed || !alive.current) return;
+          landed = true;
+          map.off('moveend', arrived);
+          setFocus([lat, lng]);   // start the pulse
+          onLanded(id);           // let the page open the site's popup
+        };
+        // Only count it as "landed" when the map really is at the site and zoom
+        // (other map movements, e.g. a resize, must not trigger the pulse early).
+        const arrived = () => {
+          if (Math.abs(map.getZoom() - TARGET_ZOOM) < 0.01 && map.distance(map.getCenter(), [lat, lng]) < 25) land();
+        };
+
+        map.flyTo([lat, lng], TARGET_ZOOM, { duration: 2.6, easeLinearity: 0.2 });
+        map.on('moveend', arrived);
+        window.setTimeout(land, 4500); // safety net, e.g. when the map cannot centre exactly on the site
+      })
+      .catch(() => { /* site no longer exists: just stay on the map */ })
+      .finally(() => {
+        // Clean the URL so a page refresh does not fly there again
+        const next = new URLSearchParams(params);
+        next.delete('site');
+        setParams(next, { replace: true });
+      });
+  }, [siteParam, map, params, setParams, onFocus, onLanded]);
+
+  // Stop the pulse after a while
+  useEffect(() => {
+    if (!focus) return;
+    const t = window.setTimeout(() => setFocus(null), 12000);
+    return () => window.clearTimeout(t);
+  }, [focus]);
+
+  return focus ? (
+    <Marker position={focus} icon={focusIcon} interactive={false} keyboard={false} zIndexOffset={-500} />
+  ) : null;
+}
+
 function MapResizeObserver() {
   const map = useMap();
   useEffect(() => {
@@ -192,13 +311,16 @@ interface UpgradePanelProps {
   siteId: number;
   siteName: string;
   onClose: () => void;
+  // Admins only: turn the recommendation into a task for an operator
+  onCreateTask?: (draft: { title: string; description: string }) => void;
 }
 
-const UpgradePanel: React.FC<UpgradePanelProps> = ({ siteId, siteName, onClose }) => {
+const UpgradePanel: React.FC<UpgradePanelProps> = ({ siteId, siteName, onClose, onCreateTask }) => {
   const [recommendation, setRecommendation] = useState('');
   const [analysisData, setAnalysisData] = useState<SiteAnalysisData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [source, setSource] = useState<'claude' | 'rule-based'>('claude');
 
   useEffect(() => {
     setLoading(true);
@@ -206,10 +328,14 @@ const UpgradePanel: React.FC<UpgradePanelProps> = ({ siteId, siteName, onClose }
     fetchUpgradeRecommendation(siteId)
       .then(res => {
         setRecommendation(res.recommendation);
+        setSource(res.source ?? 'claude');
         setAnalysisData(res.analysisData);
       })
       .catch(err => {
-        const msg = err?.response?.data?.error || err?.message || 'Unknown error';
+        const data = err?.response?.data;
+        const msg = data?.error
+          ? (data.detail ? `${data.error} — ${String(data.detail).slice(0, 200)}` : data.error)
+          : err?.message || 'Unknown error';
         setError(msg);
       })
       .finally(() => setLoading(false));
@@ -232,10 +358,10 @@ const UpgradePanel: React.FC<UpgradePanelProps> = ({ siteId, siteName, onClose }
 
   return (
     <div style={{
-      position: 'absolute', top: 0, right: 0, bottom: 0, width: '340px',
+      position: 'absolute', top: 0, right: 0, bottom: 0, width: '380px', maxWidth: '100%',
       background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)',
       borderLeft: '1px solid rgba(139,92,246,0.3)',
-      display: 'flex', flexDirection: 'column', zIndex: 1000,
+      display: 'flex', flexDirection: 'column', zIndex: 1100,
       boxShadow: '-8px 0 32px rgba(0,0,0,0.4)',
     }}>
       {/* Header */}
@@ -316,7 +442,7 @@ const UpgradePanel: React.FC<UpgradePanelProps> = ({ siteId, siteName, onClose }
       {/* AI Recommendation */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
         <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 }}>
-          AI Recommendation
+          {source === 'rule-based' ? 'Upgrade Recommendation' : 'AI Recommendation'}
         </div>
         {loading ? (
           <div style={{ textAlign: 'center', padding: '40px 0' }}>
@@ -343,7 +469,33 @@ const UpgradePanel: React.FC<UpgradePanelProps> = ({ siteId, siteName, onClose }
           </div>
         ) : (
           <div style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.6 }}>
+            {source === 'rule-based' && (
+              <div style={{
+                fontSize: 11, color: '#fbbf24', background: 'rgba(251,191,36,0.08)',
+                border: '1px solid rgba(251,191,36,0.25)', borderRadius: 6,
+                padding: '6px 10px', marginBottom: 10,
+              }}>
+                ⚙ Rule-based analysis (no AI key configured on the server)
+              </div>
+            )}
             {renderText(recommendation)}
+            {onCreateTask && (
+              <button
+                type="button"
+                onClick={() => onCreateTask({
+                  title: `Upgrade ${siteName}`,
+                  description: recommendation.replace(/\*\*/g, '').slice(0, 1900),
+                })}
+                style={{
+                  width: '100%', marginTop: 14, padding: '9px 0',
+                  background: 'rgba(52,152,219,0.14)', color: '#60a5fa',
+                  border: '1px solid rgba(52,152,219,0.45)', borderRadius: 8,
+                  cursor: 'pointer', fontSize: 13, fontWeight: 700,
+                }}
+              >
+                📋 Create task from this recommendation
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -353,7 +505,9 @@ const UpgradePanel: React.FC<UpgradePanelProps> = ({ siteId, siteName, onClose }
         padding: '10px 20px', borderTop: '1px solid rgba(255,255,255,0.06)',
         background: 'rgba(0,0,0,0.2)', textAlign: 'center',
       }}>
-        <span style={{ fontSize: 10, color: '#334155' }}>Powered by Claude · Telecom GIS</span>
+        <span style={{ fontSize: 10, color: '#334155' }}>
+          {source === 'rule-based' ? 'Rule-based engine · Telecom GIS' : 'Powered by Claude · Telecom GIS'}
+        </span>
       </div>
     </div>
   );
@@ -370,7 +524,31 @@ const EMPTY_FORM: NewSiteFormValues = {
 };
 
 // ── Main component ─────────────────────────────────────────────────────────────
+// Form field wrapper. MUST live at module level: if it is declared inside NetworkMap,
+// React sees a new component type on every render, remounts the <input> and the
+// user loses focus after each keystroke.
+const F = ({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) => (
+  <div className={styles.modalField}>
+    <label>{label}{required && <span className={styles.required}> *</span>}</label>
+    {children}
+  </div>
+);
+
 const NetworkMap: React.FC = () => {
+  // Role-based UI: only admins can create / edit / delete sites (also enforced by the API).
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
+  const navigate = useNavigate();
+
+  // Set by FocusSite when the map has finished flying to a site ("Open on map")
+  const [focusLanding, setFocusLanding] = useState<{ id: number; nonce: number } | null>(null);
+  const popupDoneFor = useRef<number | null>(null);
+  const handleLanded = useCallback((id: number) => setFocusLanding({ id, nonce: Date.now() }), []);
+  // Keep the current technology filter if it already shows the site, otherwise use the site's own
+  const handleFocusStart = useCallback((techs: string[]) => {
+    setActiveTech(cur => (cur && techs.includes(cur) ? cur : techs[0] ?? cur));
+  }, []);
+
   const [sites, setSites]               = useState<SiteFeature[]>([]);
   const [stats, setStats]               = useState<NetworkStats[]>([]);
   const [activeTech, setActiveTech]     = useState<string | null>(null);
@@ -560,13 +738,6 @@ const NetworkMap: React.FC = () => {
 
   const totalCells = stats.reduce((sum, s) => sum + parseInt(s.cell_count || '0'), 0);
 
-  const F = ({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) => (
-    <div className={styles.modalField}>
-      <label>{label}{required && <span className={styles.required}> *</span>}</label>
-      {children}
-    </div>
-  );
-
   return (
     <div className={styles.mapPage}>
 
@@ -604,7 +775,7 @@ const NetworkMap: React.FC = () => {
                 {searchResults.length > 0 ? searchResults.map(site => {
                   const color = TECH_COLORS[site.properties.technologies?.[0] || '2G'];
                   return (
-                    <div key={site.properties.id} className={styles.searchResult} onClick={() => { clearSearch(); openEdit(site); }}>
+                    <div key={site.properties.id} className={styles.searchResult} onClick={() => { clearSearch(); if (isAdmin) openEdit(site); }}>
                       <div className={styles.searchResultDot} style={{ background: color }} />
                       <div className={styles.searchResultInfo}>
                         <span className={styles.searchResultName}>{site.properties.site_name}</span>
@@ -662,9 +833,18 @@ const NetworkMap: React.FC = () => {
               🏥 POI Coverage
             </button>
 
-            <button className={styles.controlBtn} onClick={() => { setFormValues(EMPTY_FORM); setFormError(''); setModalMode('create'); }}>
-              ＋ Add Site
-            </button>
+            {isAdmin ? (
+              <button className={styles.controlBtn} onClick={() => { setFormValues(EMPTY_FORM); setFormError(''); setModalMode('create'); }}>
+                ＋ Add Site
+              </button>
+            ) : (
+              <span
+                title="Only administrators can add, edit or delete sites"
+                style={{ fontSize: 11, color: '#94a3b8', padding: '0 10px', whiteSpace: 'nowrap' }}
+              >
+                👁 Read-only · {user?.role}
+              </span>
+            )}
             <button className={styles.controlBtn} onClick={() => {
               setActiveTech(null); setShowCoverage(false);
               setShowGaps(false); setGapZones([]); setLoading(true);
@@ -693,6 +873,7 @@ const NetworkMap: React.FC = () => {
           <TileLayer url={tileLayers[mapStyle].url} attribution={tileLayers[mapStyle].attr} />
           <MapEventHandler activeTech={activeTech} onSitesLoaded={handleSitesLoaded} onLoadingChange={setLoading} onZoomChange={setCurrentZoom} reloadSignal={refreshSignal} />
           <MapResizeObserver />
+          <FocusSite onFocus={handleFocusStart} onLanded={handleLanded} />
 
           {/* ── Coverage gap circles — sized by gap distance, colour by severity ── */}
           {showGaps && gapZones.map((gap, idx) => {
@@ -790,7 +971,22 @@ const NetworkMap: React.FC = () => {
                   <Circle center={[lat, lng]} radius={getCoverageRadius(site, activeTech)}
                     pathOptions={{ color, fillColor: color, fillOpacity: 0.10, weight: 1.5, dashArray: '6 4' }} />
                 )}
-                <Marker position={[lat, lng]} icon={icon}>
+                <Marker
+                  position={[lat, lng]}
+                  icon={icon}
+                  ref={(m) => {
+                    if (
+                      m && !isCluster && focusLanding &&
+                      focusLanding.id === site.properties.id &&
+                      popupDoneFor.current !== focusLanding.nonce
+                    ) {
+                      popupDoneFor.current = focusLanding.nonce;
+                      window.setTimeout(() => {
+                        try { if ((m as any)._map) m.openPopup(); } catch { /* marker was removed meanwhile */ }
+                      }, 500);
+                    }
+                  }}
+                >
                   {!isCluster && currentZoom >= 13 && (
                     <Tooltip direction="top" offset={[0, -38]} permanent opacity={1} className={styles.siteLabel}>
                       {site.properties.site_name}
@@ -841,10 +1037,33 @@ const NetworkMap: React.FC = () => {
                             </div>
                           )}
                         </div>
-                        <div className={styles.popupActions}>
-                          <button className={styles.popupEditBtn} onClick={() => openEdit(site)}>✏ Edit</button>
-                          <button className={styles.popupDeleteBtn} onClick={() => openDelete(site)}>🗑 Delete</button>
-                        </div>
+                        {isAdmin && (
+                          <div className={styles.popupActions}>
+                            <button className={styles.popupEditBtn} onClick={() => openEdit(site)}>✏ Edit</button>
+                            <button className={styles.popupDeleteBtn} onClick={() => openDelete(site)}>🗑 Delete</button>
+                          </div>
+                        )}
+                        {isAdmin && (
+                          <div style={{ padding: '0 12px 8px' }}>
+                            <button
+                              onClick={() => navigate('/tasks', {
+                                state: { newTask: {
+                                  siteId: site.properties.id,
+                                  siteName: site.properties.site_name,
+                                  title: `Check ${site.properties.site_name}`,
+                                } },
+                              })}
+                              style={{
+                                width: '100%', padding: '7px 0',
+                                background: 'rgba(52,152,219,0.12)', color: '#60a5fa',
+                                border: '1px solid rgba(52,152,219,0.4)', borderRadius: 6,
+                                cursor: 'pointer', fontSize: 12, fontWeight: 600,
+                              }}
+                            >
+                              📋 Create task
+                            </button>
+                          </div>
+                        )}
                         {/* AI Upgrade Recommendation — opens the side panel */}
                         <div style={{ padding: '0 12px 12px' }}>
                           <button
@@ -1003,6 +1222,9 @@ const NetworkMap: React.FC = () => {
             siteId={upgradeTarget.id}
             siteName={upgradeTarget.name}
             onClose={() => setUpgradeTarget(null)}
+            onCreateTask={isAdmin ? (draft) => navigate('/tasks', {
+              state: { newTask: { siteId: upgradeTarget.id, siteName: upgradeTarget.name, ...draft } },
+            }) : undefined}
           />
         )}
 
@@ -1036,7 +1258,10 @@ const NetworkMap: React.FC = () => {
         )}
 
         {/* ── Stats panel ───────────────────────────────────────────────────── */}
-        <div className={styles.statsPanel}>
+        <div
+          className={styles.statsPanel}
+          style={{ right: upgradeTarget ? 396 : 16, transition: 'right 0.25s ease' }}
+        >
           <div className={styles.statsPanelHeader}>
             <span className={styles.statsPanelTitle}>Network Stats</span>
             <span className={styles.statsPanelTotal}>{totalCells.toLocaleString()} cells</span>

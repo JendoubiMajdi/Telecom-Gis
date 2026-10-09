@@ -117,6 +117,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setUser(null);
           setToken(null);
           setIsOtpVerified(false);
+        } finally {
+          // Always stop the loading state, even when the code above returns early
+          // (OTP page / 2FA redirects). Otherwise PrivateRoute stays on "Loading..." forever.
+          setIsLoading(false);
         }
       }
       setIsLoading(false);

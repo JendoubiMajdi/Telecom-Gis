@@ -110,6 +110,7 @@ export interface SiteAnalysisData {
 export interface UpgradeRecommendationResponse {
   recommendation: string;
   analysisData: SiteAnalysisData;
+  source?: 'claude' | 'rule-based';
 }
 
 // ── Standard API calls ─────────────────────────────────────────────────────────

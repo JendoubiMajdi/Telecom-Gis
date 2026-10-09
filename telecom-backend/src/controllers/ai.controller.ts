@@ -47,11 +47,28 @@ export const upgradeRecommendationHandler = async (req: Request, res: Response):
   } catch (err: any) {
     console.error('upgradeRecommendation error:', err);
 
-    // Surface a clean error if the API key is missing
-    if (err?.message?.includes('ANTHROPIC_API_KEY')) {
-      res.status(500).json({ error: 'Server is missing ANTHROPIC_API_KEY in .env' });
+    const msg: string = err?.message ?? '';
+
+    if (msg.includes('ANTHROPIC_API_KEY')) {
+      res.status(500).json({ error: 'Server is missing ANTHROPIC_API_KEY in .env (restart the backend after adding it)' });
       return;
     }
-    res.status(500).json({ error: 'Failed to get recommendation', detail: err?.message });
+    if (msg.startsWith('Site not found')) {
+      res.status(404).json({ error: 'Site not found, or it has no cells to analyse' });
+      return;
+    }
+    if (msg.startsWith('Claude API error 401')) {
+      res.status(502).json({ error: 'Anthropic rejected the API key (invalid or revoked). Check ANTHROPIC_API_KEY in .env' });
+      return;
+    }
+    if (msg.startsWith('Claude API error 404')) {
+      res.status(502).json({ error: 'The AI model was not found. Set ANTHROPIC_MODEL in .env to a model your key can use', detail: msg });
+      return;
+    }
+    if (msg.startsWith('Claude API error')) {
+      res.status(502).json({ error: 'The AI service returned an error', detail: msg });
+      return;
+    }
+    res.status(500).json({ error: 'Failed to get recommendation', detail: msg });
   }
 };
