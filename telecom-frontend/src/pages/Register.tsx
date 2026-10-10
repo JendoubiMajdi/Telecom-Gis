@@ -8,8 +8,7 @@ const Register: React.FC = () => {
     email: '',
     password: '',
     confirmPassword: '',
-    fullName: '',
-    role: 'viewer' as 'admin' | 'operator' | 'viewer'
+    fullName: ''
   });
   
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
@@ -28,7 +27,7 @@ const Register: React.FC = () => {
     }
   }, [isAuthenticated, navigate]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
@@ -88,8 +87,7 @@ const Register: React.FC = () => {
       await register(
         formData.email,
         formData.password,
-        formData.fullName,
-        formData.role
+        formData.fullName
       );
 
       if (profilePicture) {
@@ -251,23 +249,7 @@ const Register: React.FC = () => {
             />
           </div>
 
-          <div className={styles.formGroup}>
-            <label htmlFor="role" className={styles.label}>Role</label>
-            <select
-              id="role"
-              name="role"
-              value={formData.role}
-              onChange={handleChange}
-              className={styles.select}
-              disabled={loading}
-            >
-              <option value="viewer">Viewer (Read-only access)</option>
-              <option value="operator">Operator (Can edit telecom data)</option>
-              <option value="admin">Administrator (Full access)</option>
-            </select>
-          </div>
-
-          <button 
+          <button
             type="submit" 
             className={styles.button}
             disabled={loading}
@@ -282,10 +264,9 @@ const Register: React.FC = () => {
         </div>
 
         <div className={styles.roleInfo}>
-          <p className={styles.roleTitle}>Role Information:</p>
-          <p className={styles.roleText}>• Viewer: Can view maps and data</p>
-          <p className={styles.roleText}>• Operator: Can edit telecom infrastructure</p>
-          <p className={styles.roleText}>• Admin: Full system control</p>
+          <p className={styles.roleTitle}>About your access:</p>
+          <p className={styles.roleText}>New accounts start as Viewer (can view maps and data).</p>
+          <p className={styles.roleText}>An administrator can upgrade you to Operator or Admin.</p>
         </div>
       </div>
     </div>

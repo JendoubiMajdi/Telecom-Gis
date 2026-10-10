@@ -16,7 +16,7 @@ interface AuthContextType {
   
   // Authentication
   login: (email: string, password: string) => Promise<{ requiresOtp: boolean; user: User }>;
-  register: (email: string, password: string, fullName: string, role: string) => Promise<void>;
+  register: (email: string, password: string, fullName: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
   
@@ -163,14 +163,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const register = async (email: string, password: string, fullName: string, role: string = 'viewer') => {
+  // New accounts are always viewers (set by the server); admins promote them later.
+  const register = async (email: string, password: string, fullName: string) => {
     try {
-      const response = await authService.register({ 
-        email, 
-        password, 
-        fullName, 
-        role: role as 'admin' | 'operator' | 'viewer' 
-      });
+      const response = await authService.register({ email, password, fullName });
       
       // Ensure user object has twoFactorEnabled on register
       const userWith2FA = {

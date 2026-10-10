@@ -19,7 +19,6 @@ export interface LoginData {
 
 export interface RegisterData extends LoginData {
   fullName: string;
-  role?: 'admin' | 'operator' | 'viewer';
 }
 
 export interface UpdateProfileData {
