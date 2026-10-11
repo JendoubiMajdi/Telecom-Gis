@@ -19,7 +19,8 @@ pipeline {
   }
 
   triggers {
-    // GitHub cannot reach a local Jenkins with a webhook, so poll instead
+    // Stands in for a push webhook (GitHub cannot reach a local Jenkins): checks the
+    // development branch every 2 minutes and builds only when there are new commits
     pollSCM('H/2 * * * *')
   }
 
@@ -33,11 +34,14 @@ pipeline {
 
   stages {
     stage('Release') {
-      // Only when frontend files changed, or when started by hand (the first build has no changeset)
+      // Runs when started by hand, or on a push to development that touches telecom-frontend/
       when {
         anyOf {
-          changeset 'telecom-frontend/**'
           triggeredBy 'UserIdCause'
+          allOf {
+            expression { env.GIT_BRANCH == 'origin/development' }
+            changeset 'telecom-frontend/**'
+          }
         }
       }
       stages {
