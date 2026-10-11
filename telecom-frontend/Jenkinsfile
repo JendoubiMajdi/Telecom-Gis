@@ -1,5 +1,6 @@
 // CI for telecom-frontend
 //   build image (React bundle + nginx) -> push to Docker Hub, tagged with the build number
+//   Runs only when started by hand (Build Now)
 //
 // Jenkins job: Pipeline script from SCM, repo https://github.com/JendoubiMajdi/Telecom-Gis.git,
 // branch */development, Script Path telecom-frontend/Jenkinsfile
@@ -18,12 +19,6 @@ pipeline {
     timeout(time: 30, unit: 'MINUTES')
   }
 
-  triggers {
-    // Stands in for a push webhook (GitHub cannot reach a local Jenkins): checks the
-    // development branch every 2 minutes and builds only when there are new commits
-    pollSCM('H/2 * * * *')
-  }
-
   environment {
     APP_DIR = 'telecom-frontend'
     IMAGE   = 'docker.io/majdi99/telecom-frontend'
@@ -33,39 +28,25 @@ pipeline {
   }
 
   stages {
-    stage('Release') {
-      // Runs when started by hand, or on a push to development that touches telecom-frontend/
-      when {
-        anyOf {
-          triggeredBy 'UserIdCause'
-          allOf {
-            expression { env.GIT_BRANCH == 'origin/development' }
-            changeset 'telecom-frontend/**'
-          }
+    stage('Build image') {
+      steps {
+        sh 'docker build --pull --build-arg REACT_APP_API_URL="$API_URL" -t "$IMAGE:$TAG" -t "$IMAGE:latest" "$APP_DIR"'
+      }
+    }
+
+    stage('Push image') {
+      steps {
+        withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+          sh '''
+            echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+            docker push "$IMAGE:$TAG"
+            docker push "$IMAGE:latest"
+          '''
         }
       }
-      stages {
-        stage('Build image') {
-          steps {
-            sh 'docker build --pull --build-arg REACT_APP_API_URL="$API_URL" -t "$IMAGE:$TAG" -t "$IMAGE:latest" "$APP_DIR"'
-          }
-        }
-
-        stage('Push image') {
-          steps {
-            withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-              sh '''
-                echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                docker push "$IMAGE:$TAG"
-                docker push "$IMAGE:latest"
-              '''
-            }
-          }
-          post {
-            always {
-              sh 'docker logout || true'
-            }
-          }
+      post {
+        always {
+          sh 'docker logout || true'
         }
       }
     }
