@@ -2,9 +2,26 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import styles from './Register.module.css';
+import FieldError from '../components/FieldError';
+import { useFormValidation } from '../hooks/useFormValidation';
+import { rules, reveal } from '../utils/validation';
+
+interface RegisterForm {
+  email: string;
+  password: string;
+  confirmPassword: string;
+  fullName: string;
+}
+
+const validateRegister = (f: RegisterForm) => ({
+  fullName: rules.fullName(f.fullName),
+  email: rules.email(f.email),
+  password: rules.password(f.password),
+  confirmPassword: rules.confirm(f.confirmPassword, f.password),
+});
 
 const Register: React.FC = () => {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<RegisterForm>({
     email: '',
     password: '',
     confirmPassword: '',
@@ -14,12 +31,20 @@ const Register: React.FC = () => {
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const [profilePictureFile, setProfilePictureFile] = useState<File | null>(null);
   const [error, setError] = useState<string>('');
+  const [photoError, setPhotoError] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   
   const { register, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const alertRef = useRef<HTMLDivElement>(null);
+  const v = useFormValidation(formData, validateRegister);
+
+  // Server errors are shown at the top of the card: bring them into view
+  useEffect(() => {
+    if (error || success) reveal(alertRef.current);
+  }, [error, success]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -38,14 +63,17 @@ const Register: React.FC = () => {
   const handleProfilePictureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setPhotoError('');
 
     if (!file.type.startsWith('image/')) {
-      setError('Please upload an image file');
+      setPhotoError('Please choose an image file (JPG, PNG, GIF…)');
+      e.target.value = '';
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      setError('Image size should be less than 5MB');
+      setPhotoError('Image size should be less than 5MB');
+      e.target.value = '';
       return;
     }
 
@@ -61,6 +89,7 @@ const Register: React.FC = () => {
   const handleRemovePicture = () => {
     setProfilePicture(null);
     setProfilePictureFile(null);
+    setPhotoError('');
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -71,23 +100,15 @@ const Register: React.FC = () => {
     setError('');
     setSuccess('');
 
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
-
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters');
-      return;
-    }
+    if (!v.validateAll()) return;
 
     setLoading(true);
 
     try {
       await register(
-        formData.email,
+        formData.email.trim(),
         formData.password,
-        formData.fullName
+        formData.fullName.trim()
       );
 
       if (profilePicture) {
@@ -118,7 +139,16 @@ const Register: React.FC = () => {
       }, 1500);
       
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Registration failed. Please try again.');
+      // the API answers with { message } (and sometimes { error })
+      const apiMessage: string = err.response?.data?.message || err.response?.data?.error || '';
+      if (err.response?.status === 409 || /already exists/i.test(apiMessage)) {
+        // shown under the Email field, which is where the user has to fix it
+        v.setServerError('email', 'An account with this email already exists. Use another email or log in instead.');
+      } else if (!err.response) {
+        setError('Cannot reach the server. Check your connection and try again.');
+      } else {
+        setError(apiMessage || 'Registration failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -130,19 +160,21 @@ const Register: React.FC = () => {
         <h2 className={styles.title}>Telecom GIS Platform</h2>
         <h3 className={styles.subtitle}>Create Account</h3>
         
-        {error && (
-          <div className={styles.errorAlert}>
-            {error}
-          </div>
-        )}
+        <div ref={alertRef}>
+          {error && (
+            <div className={styles.errorAlert} role="alert">
+              {error}
+            </div>
+          )}
 
-        {success && (
-          <div className={styles.successAlert}>
-            {success}
-          </div>
-        )}
+          {success && (
+            <div className={styles.successAlert}>
+              {success}
+            </div>
+          )}
+        </div>
 
-        <form onSubmit={handleSubmit} className={styles.form}>
+        <form onSubmit={handleSubmit} className={styles.form} noValidate>
           <div className={styles.profilePictureSection}>
             <div className={styles.profilePictureContainer}>
               {profilePicture ? (
@@ -187,66 +219,71 @@ const Register: React.FC = () => {
             <p className={styles.pictureHint}>
               Optional: Square image, max 5MB
             </p>
+            <FieldError message={photoError} />
           </div>
 
           <div className={styles.formGroup}>
             <label htmlFor="fullName" className={styles.label}>Full Name *</label>
             <input
               type="text"
-              id="fullName"
-              name="fullName"
+              {...v.field('fullName')}
               value={formData.fullName}
               onChange={handleChange}
-              className={styles.input}
+              className={`${styles.input} ${v.invalid('fullName')}`}
+              autoComplete="name"
               placeholder="Enter your full name"
               required
               disabled={loading}
             />
+            <FieldError {...v.errorProps('fullName')} />
           </div>
 
           <div className={styles.formGroup}>
             <label htmlFor="email" className={styles.label}>Email *</label>
             <input
               type="email"
-              id="email"
-              name="email"
+              {...v.field('email')}
               value={formData.email}
               onChange={handleChange}
-              className={styles.input}
+              className={`${styles.input} ${v.invalid('email')}`}
+              autoComplete="email"
               placeholder="Enter your email"
               required
               disabled={loading}
             />
+            <FieldError {...v.errorProps('email')} />
           </div>
 
           <div className={styles.formGroup}>
             <label htmlFor="password" className={styles.label}>Password *</label>
             <input
               type="password"
-              id="password"
-              name="password"
+              {...v.field('password')}
               value={formData.password}
               onChange={handleChange}
-              className={styles.input}
+              className={`${styles.input} ${v.invalid('password')}`}
+              autoComplete="new-password"
               placeholder="Enter password (min. 6 characters)"
               required
               disabled={loading}
             />
+            <FieldError {...v.errorProps('password')} />
           </div>
 
           <div className={styles.formGroup}>
             <label htmlFor="confirmPassword" className={styles.label}>Confirm Password *</label>
             <input
               type="password"
-              id="confirmPassword"
-              name="confirmPassword"
+              {...v.field('confirmPassword')}
               value={formData.confirmPassword}
               onChange={handleChange}
-              className={styles.input}
+              className={`${styles.input} ${v.invalid('confirmPassword')}`}
+              autoComplete="new-password"
               placeholder="Confirm your password"
               required
               disabled={loading}
             />
+            <FieldError {...v.errorProps('confirmPassword')} />
           </div>
 
           <button

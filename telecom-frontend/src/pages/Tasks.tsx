@@ -21,6 +21,9 @@ import {
   searchTaskSites,
 } from '../services/tasksApi';
 import styles from './Tasks.module.css';
+import FieldError from '../components/FieldError';
+import { useFormValidation } from '../hooks/useFormValidation';
+import { rules, revealField } from '../utils/validation';
 
 // ── helpers ────────────────────────────────────────────────────────────────────
 type Flash = (type: 'ok' | 'error', text: string) => void;
@@ -50,7 +53,38 @@ const fmtTime = (iso: string): string => new Date(iso).toLocaleString();
 const initials = (name: string | null): string =>
   (name || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(p => p[0]?.toUpperCase()).join('') || '?';
 
-const PRIORITY_RANK: Record<TaskPriority, number> = { critical: 4, high: 3, medium: 2, low: 1 };
+const NOTE_MIN = 3;
+const blockNoteError = (note: string): string =>
+  note.trim().length >= NOTE_MIN ? '' : 'Please explain what is blocking this task (at least 3 characters)';
+
+interface NewTaskForm {
+  title: string;
+  description: string;
+  assigneeId: string;
+  dueDate: string;
+}
+
+const validateNewTask = (f: NewTaskForm) => {
+  const title = f.title.trim();
+  return {
+    title: !title
+      ? 'Give the task a title'
+      : title.length < 3
+        ? 'The title must be at least 3 characters'
+        : rules.maxLength(title, 120, 'The title'),
+    description: rules.maxLength(f.description, 2000, 'The description'),
+    assigneeId: f.assigneeId ? '' : 'Choose who this task is assigned to',
+    dueDate: !f.dueDate
+      ? ''
+      : !/^\d{4}-\d{2}-\d{2}$/.test(f.dueDate) || isNaN(Date.parse(f.dueDate))
+        ? 'Enter a valid date'
+        : f.dueDate < todayStr()
+          ? 'The due date cannot be in the past'
+          : '',
+  };
+};
+
+const PRIORITY_RANK: Record<TaskPriority, number>= { critical: 4, high: 3, medium: 2, low: 1 };
 
 const sortTasks = (a: Task, b: Task): number => {
   const p = PRIORITY_RANK[b.priority] - PRIORITY_RANK[a.priority];
@@ -138,7 +172,9 @@ const TaskDetail: React.FC<TaskDetailProps> = ({ taskId, isAdmin, staff, onClose
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState('');
+  const [noteError, setNoteError] = useState('');
   const [reassignTo, setReassignTo] = useState('');
+  const noteRef = useRef<HTMLTextAreaElement>(null);
 
   const load = useCallback(async () => {
     try {
@@ -167,11 +203,13 @@ const TaskDetail: React.FC<TaskDetailProps> = ({ taskId, isAdmin, staff, onClose
 
   const changeStatus = async (status: TaskStatus) => {
     if (!task || task.status === status) return;
-    if (status === 'blocked' && note.trim().length < 3) {
-      setFormError('Please explain what is blocking this task (write it in the note box).');
+    if (status === 'blocked' && blockNoteError(note)) {
+      setNoteError(`${blockNoteError(note)} before marking it as blocked.`);
+      revealField(noteRef.current);
       return;
     }
     setFormError('');
+    setNoteError('');
     setBusy(true);
     try {
       const updated = await updateTaskStatus(task.id, status, note.trim() || undefined);
@@ -187,8 +225,14 @@ const TaskDetail: React.FC<TaskDetailProps> = ({ taskId, isAdmin, staff, onClose
   };
 
   const postComment = async () => {
-    if (!task || !note.trim()) return;
+    if (!task) return;
+    if (!note.trim()) {
+      setNoteError('Write a note first');
+      revealField(noteRef.current);
+      return;
+    }
     setFormError('');
+    setNoteError('');
     setBusy(true);
     try {
       setComments(await addTaskComment(task.id, note.trim()));
@@ -294,15 +338,23 @@ const TaskDetail: React.FC<TaskDetailProps> = ({ taskId, isAdmin, staff, onClose
                   ))}
                 </div>
                 <textarea
-                  className={styles.textarea}
+                  ref={noteRef}
+                  id="task-note"
+                  className={`${styles.textarea} ${noteError ? 'field-invalid' : ''}`}
                   rows={2}
                   placeholder="Add a note (required when blocking a task)…"
                   value={note}
                   maxLength={500}
-                  onChange={e => setNote(e.target.value)}
+                  aria-invalid={!!noteError}
+                  aria-describedby={noteError ? 'task-note-error' : undefined}
+                  onChange={e => {
+                    setNote(e.target.value);
+                    if (noteError && e.target.value.trim().length >= NOTE_MIN) setNoteError('');
+                  }}
                 />
+                <FieldError id="task-note-error" message={noteError} />
                 <div className={styles.noteActions}>
-                  <button type="button" className={styles.btn} disabled={busy || !note.trim()} onClick={postComment}>
+                  <button type="button" className={styles.btn} disabled={busy} onClick={postComment}>
                     Post note only
                   </button>
                 </div>
@@ -378,6 +430,7 @@ const NewTaskModal: React.FC<NewTaskModalProps> = ({ staff, prefill, onClose, on
   const [siteResults, setSiteResults] = useState<SitePick[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const v = useFormValidation({ title, description, assigneeId, dueDate }, validateNewTask, 'new-task-');
 
   // Site search (debounced)
   useEffect(() => {
@@ -403,8 +456,7 @@ const NewTaskModal: React.FC<NewTaskModalProps> = ({ staff, prefill, onClose, on
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (title.trim().length < 3) { setError('Please give the task a title (at least 3 characters).'); return; }
-    if (!assigneeId) { setError('Please choose who this task is assigned to.'); return; }
+    if (!v.validateAll()) return;
     setSaving(true);
     try {
       const created = await createTask({
@@ -424,7 +476,7 @@ const NewTaskModal: React.FC<NewTaskModalProps> = ({ staff, prefill, onClose, on
 
   return (
     <div className={styles.overlay} onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <form className={styles.modal} onSubmit={submit} role="dialog" aria-modal="true" aria-label="New task">
+      <form className={styles.modal} onSubmit={submit} role="dialog" aria-modal="true" aria-label="New task" noValidate>
         <div className={styles.modalHeader}>
           <h2 className={styles.modalTitle}>New task</h2>
           <button type="button" className={styles.closeBtn} onClick={onClose} aria-label="Close">✕</button>
@@ -433,14 +485,17 @@ const NewTaskModal: React.FC<NewTaskModalProps> = ({ staff, prefill, onClose, on
         <div className={styles.modalBody}>
           <label className={styles.field}>
             <span>Title *</span>
-            <input className={styles.input} value={title} maxLength={120} placeholder="e.g. Restore inactive cells on SFX2105"
-                   onChange={e => setTitle(e.target.value)} autoFocus />
+            <input {...v.field('title')} className={`${styles.input} ${v.invalid('title')}`} value={title} maxLength={120}
+                   placeholder="e.g. Restore inactive cells on SFX2105" onChange={e => setTitle(e.target.value)} autoFocus />
+            <FieldError {...v.errorProps('title')} />
           </label>
 
           <label className={styles.field}>
             <span>Description</span>
-            <textarea className={styles.textarea} rows={4} value={description} maxLength={2000}
+            <textarea {...v.field('description')} className={`${styles.textarea} ${v.invalid('description')}`} rows={4}
+                      value={description} maxLength={2000}
                       placeholder="What exactly should be done?" onChange={e => setDescription(e.target.value)} />
+            <FieldError {...v.errorProps('description')} />
           </label>
 
           <div className={styles.field}>
@@ -472,12 +527,14 @@ const NewTaskModal: React.FC<NewTaskModalProps> = ({ staff, prefill, onClose, on
           <div className={styles.row3}>
             <label className={styles.field}>
               <span>Assign to *</span>
-              <select className={styles.input} value={assigneeId} onChange={e => setAssigneeId(e.target.value)}>
-                <option value="">Choose…</option>
+              <select {...v.field('assigneeId')} className={`${styles.input} ${v.invalid('assigneeId')}`}
+                      value={assigneeId} onChange={e => setAssigneeId(e.target.value)}>
+                <option value="">{staff.length ? 'Choose…' : 'No active operator available'}</option>
                 {staff.map(s => (
                   <option key={s.id} value={s.id}>{s.fullName} ({s.role})</option>
                 ))}
               </select>
+              <FieldError {...v.errorProps('assigneeId')} />
             </label>
             <label className={styles.field}>
               <span>Priority</span>
@@ -489,7 +546,9 @@ const NewTaskModal: React.FC<NewTaskModalProps> = ({ staff, prefill, onClose, on
             </label>
             <label className={styles.field}>
               <span>Due date</span>
-              <input className={styles.input} type="date" value={dueDate} min={todayStr()} onChange={e => setDueDate(e.target.value)} />
+              <input {...v.field('dueDate')} className={`${styles.input} ${v.invalid('dueDate')}`} type="date"
+                     value={dueDate} min={todayStr()} onChange={e => setDueDate(e.target.value)} />
+              <FieldError {...v.errorProps('dueDate')} />
             </label>
           </div>
 
@@ -514,7 +573,9 @@ const BlockReasonModal: React.FC<{
   onConfirm: (note: string) => void;
 }> = ({ title, onCancel, onConfirm }) => {
   const [note, setNote] = useState('');
-  const [error, setError] = useState('');
+  const [submitted, setSubmitted] = useState(false);
+  const noteRef = useRef<HTMLTextAreaElement>(null);
+  const error = submitted ? blockNoteError(note) : '';
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -526,8 +587,9 @@ const BlockReasonModal: React.FC<{
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (note.trim().length < 3) {
-      setError('Please explain what is blocking this task.');
+    setSubmitted(true);
+    if (blockNoteError(note)) {
+      revealField(noteRef.current);
       return;
     }
     onConfirm(note.trim());
@@ -535,7 +597,7 @@ const BlockReasonModal: React.FC<{
 
   return (
     <div className={styles.overlay} onMouseDown={e => { if (e.target === e.currentTarget) onCancel(); }}>
-      <form className={`${styles.modal} ${styles.modalSmall}`} onSubmit={submit} role="dialog" aria-modal="true" aria-label="Why is it blocked?">
+      <form className={`${styles.modal} ${styles.modalSmall}`} onSubmit={submit} role="dialog" aria-modal="true" aria-label="Why is it blocked?" noValidate>
         <div className={styles.modalHeader}>
           <div>
             <div className={styles.modalBadges}>
@@ -548,15 +610,19 @@ const BlockReasonModal: React.FC<{
         </div>
         <div className={styles.modalBody}>
           <textarea
-            className={styles.textarea}
+            ref={noteRef}
+            id="block-reason"
+            className={`${styles.textarea} ${error ? 'field-invalid' : ''}`}
             rows={3}
             autoFocus
             maxLength={500}
             placeholder="e.g. Waiting for roof access, spare part not delivered…"
             value={note}
+            aria-invalid={!!error}
+            aria-describedby={error ? 'block-reason-error' : undefined}
             onChange={e => setNote(e.target.value)}
           />
-          {error && <div className={styles.formError}>{error}</div>}
+          <FieldError id="block-reason-error" message={error} />
           <div className={styles.formActions}>
             <button type="button" className={styles.btn} onClick={onCancel}>Cancel</button>
             <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`}>Mark as blocked</button>

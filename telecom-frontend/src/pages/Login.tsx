@@ -2,8 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import styles from './Login.module.css';
-import authService from '../services/auth.service';
 import logo from '../assets/telcoteclogo.png';
+import FieldError from '../components/FieldError';
+import { useFormValidation } from '../hooks/useFormValidation';
+import { rules } from '../utils/validation';
+
+const validateLogin = (f: { email: string; password: string }) => ({
+  email: rules.email(f.email),
+  password: f.password ? '' : 'Password is required',
+});
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState<string>('');
@@ -12,8 +19,10 @@ const Login: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [showPassword, setShowPassword] = useState<boolean>(false);
 
-  const { login, isAuthenticated, sendOtp, has2FAEnabled, setVerifyingOTP } = useAuth();
+  const { login, isAuthenticated, sendOtp, setVerifyingOTP } = useAuth();
   const navigate = useNavigate();
+
+  const v = useFormValidation({ email, password }, validateLogin);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -24,16 +33,17 @@ const Login: React.FC = () => {
 const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
   setError('');
+  if (!v.validateAll()) return;
   setLoading(true);
 
   try {
-    const loginResult = await login(email, password);
+    const loginResult = await login(email.trim(), password);
     
     if (loginResult.requiresOtp) {
       try {
         setVerifyingOTP(true);
-        await sendOtp(email, 'login');
-        navigate('/otp-verification', { state: { email } });
+        await sendOtp(email.trim(), 'login');
+        navigate('/otp-verification', { state: { email: email.trim() } });
         return;
       } catch (otpError: any) {
         console.error('❌ Failed to send OTP:', otpError);
@@ -83,7 +93,7 @@ const handleSubmit = async (e: React.FormEvent) => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className={styles.form}>
+        <form onSubmit={handleSubmit} className={styles.form} noValidate>
           <div className={styles.formGroup}>
             <label htmlFor="email" className={styles.label}>
               <span className={styles.labelIcon}>📧</span>
@@ -91,15 +101,17 @@ const handleSubmit = async (e: React.FormEvent) => {
             </label>
             <input
               type="email"
-              id="email"
+              {...v.field('email')}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className={styles.input}
+              className={`${styles.input} ${v.invalid('email')}`}
               placeholder="Enter your email"
+              autoComplete="email"
               required
               disabled={loading}
               autoFocus
             />
+            <FieldError {...v.errorProps('email')} />
           </div>
 
           <div className={styles.formGroup}>
@@ -119,15 +131,17 @@ const handleSubmit = async (e: React.FormEvent) => {
             <div className={styles.passwordContainer}>
               <input
                 type={showPassword ? "text" : "password"}
-                id="password"
+                {...v.field('password')}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className={styles.input}
+                className={`${styles.input} ${v.invalid('password')}`}
                 placeholder="Enter your password"
+                autoComplete="current-password"
                 required
                 disabled={loading}
               />
             </div>
+            <FieldError {...v.errorProps('password')} />
           </div>
 
           <div className={styles.rememberForgot}>
@@ -144,7 +158,7 @@ const handleSubmit = async (e: React.FormEvent) => {
           <button 
             type="submit" 
             className={styles.button}
-            disabled={loading || !email || !password}
+            disabled={loading}
           >
             {loading ? (
               <>

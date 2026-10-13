@@ -2,6 +2,11 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import styles from './ForgotPassword.module.css';
+import FieldError from '../components/FieldError';
+import { useFormValidation } from '../hooks/useFormValidation';
+import { rules } from '../utils/validation';
+
+const validateForgot = (f: { email: string }) => ({ email: rules.email(f.email) });
 
 const ForgotPassword: React.FC = () => {
   const [email, setEmail] = useState<string>('');
@@ -11,31 +16,25 @@ const ForgotPassword: React.FC = () => {
   
   const { forgotPassword } = useAuth();
   const navigate = useNavigate();
+  const v = useFormValidation({ email }, validateForgot);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess('');
     
-    if (!email) {
-      setError('Please enter your email address');
-      return;
-    }
-    
-    if (!/\S+@\S+\.\S+/.test(email)) {
-      setError('Please enter a valid email address');
-      return;
-    }
-    
+    if (!v.validateAll()) return;
+
     setLoading(true);
     
     try {
-      const response = await forgotPassword(email);
+      const response = await forgotPassword(email.trim());
       
       if (response.success) {
         setSuccess(response.message);
         // Clear form
         setEmail('');
+        v.reset();
       } else {
         setError(response.message || 'Failed to send reset instructions');
       }
@@ -75,7 +74,7 @@ const ForgotPassword: React.FC = () => {
         )}
 
         {!success && (
-          <form onSubmit={handleSubmit} className={styles.form}>
+          <form onSubmit={handleSubmit} className={styles.form} noValidate>
             <div className={styles.formGroup}>
               <label htmlFor="email" className={styles.label}>
                 <span className={styles.labelIcon}>📧</span>
@@ -83,15 +82,17 @@ const ForgotPassword: React.FC = () => {
               </label>
               <input
                 type="email"
-                id="email"
+                {...v.field('email')}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className={styles.input}
+                className={`${styles.input} ${v.invalid('email')}`}
                 placeholder="you@example.com"
+                autoComplete="email"
                 required
                 disabled={loading}
                 autoFocus
               />
+              <FieldError {...v.errorProps('email')} />
             </div>
 
             <button 

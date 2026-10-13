@@ -2,6 +2,28 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import styles from './ResetPassword.module.css';
+import FieldError from '../components/FieldError';
+import { useFormValidation } from '../hooks/useFormValidation';
+import { rules } from '../utils/validation';
+
+const PASSWORD_REQUIREMENTS: { label: string; test: (p: string) => boolean }[] = [
+  { label: 'At least 6 characters', test: p => p.length >= 6 },
+  { label: 'One uppercase letter', test: p => /[A-Z]/.test(p) },
+  { label: 'One lowercase letter', test: p => /[a-z]/.test(p) },
+  { label: 'One number', test: p => /[0-9]/.test(p) },
+];
+
+const validateReset = (f: { newPassword: string; confirmPassword: string }) => {
+  const missing = PASSWORD_REQUIREMENTS.find(r => !r.test(f.newPassword));
+  return {
+    newPassword: !f.newPassword
+      ? 'New password is required'
+      : missing
+        ? `Password needs: ${missing.label.toLowerCase()}`
+        : rules.password(f.newPassword, 'New password'),
+    confirmPassword: rules.confirm(f.confirmPassword, f.newPassword),
+  };
+};
 
 const ResetPassword: React.FC = () => {
   const [newPassword, setNewPassword] = useState<string>('');
@@ -18,6 +40,7 @@ const ResetPassword: React.FC = () => {
   const { resetPassword } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const v = useFormValidation({ newPassword, confirmPassword }, validateReset);
 
   // Get token from URL
   useEffect(() => {
@@ -63,25 +86,6 @@ const ResetPassword: React.FC = () => {
     return '#27ae60'; // Dark Green
   };
 
-  const validatePassword = (password: string): string[] => {
-    const errors: string[] = [];
-    
-    if (password.length < 6) {
-      errors.push('Password must be at least 6 characters');
-    }
-    if (!/[A-Z]/.test(password)) {
-      errors.push('Include at least one uppercase letter');
-    }
-    if (!/[a-z]/.test(password)) {
-      errors.push('Include at least one lowercase letter');
-    }
-    if (!/[0-9]/.test(password)) {
-      errors.push('Include at least one number');
-    }
-    
-    return errors;
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -92,21 +96,7 @@ const ResetPassword: React.FC = () => {
       return;
     }
     
-    if (!newPassword || !confirmPassword) {
-      setError('Please fill in all fields');
-      return;
-    }
-    
-    if (newPassword !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
-    
-    const passwordErrors = validatePassword(newPassword);
-    if (passwordErrors.length > 0) {
-      setError(passwordErrors[0]);
-      return;
-    }
+    if (!v.validateAll()) return;
     
     setLoading(true);
     
@@ -190,7 +180,7 @@ const ResetPassword: React.FC = () => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className={styles.form}>
+        <form onSubmit={handleSubmit} className={styles.form} noValidate>
           {/* Password Strength Meter */}
           {newPassword && (
             <div className={styles.strengthMeter}>
@@ -212,15 +202,10 @@ const ResetPassword: React.FC = () => {
                 ></div>
               </div>
               <div className={styles.strengthRequirements}>
-                {validatePassword(newPassword).map((req, index) => (
-                  <div key={index} className={styles.requirementItem}>
-                    <span className={styles.requirementIcon}>
-                      {newPassword.length >= 6 && req.includes('characters') ? '✅' : '❌'}
-                      {/[A-Z]/.test(newPassword) && req.includes('uppercase') ? '✅' : '❌'}
-                      {/[a-z]/.test(newPassword) && req.includes('lowercase') ? '✅' : '❌'}
-                      {/[0-9]/.test(newPassword) && req.includes('number') ? '✅' : '❌'}
-                    </span>
-                    <span className={styles.requirementText}>{req}</span>
+                {PASSWORD_REQUIREMENTS.map(req => (
+                  <div key={req.label} className={styles.requirementItem}>
+                    <span className={styles.requirementIcon}>{req.test(newPassword) ? '✅' : '❌'}</span>
+                    <span className={styles.requirementText}>{req.label}</span>
                   </div>
                 ))}
               </div>
@@ -236,10 +221,11 @@ const ResetPassword: React.FC = () => {
             <div className={styles.passwordInputContainer}>
               <input
                 type={showPassword ? "text" : "password"}
-                id="newPassword"
+                {...v.field('newPassword')}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                className={styles.input}
+                className={`${styles.input} ${v.invalid('newPassword')}`}
+                autoComplete="new-password"
                 placeholder="Enter new password"
                 required
                 disabled={loading}
@@ -254,6 +240,7 @@ const ResetPassword: React.FC = () => {
                 {showPassword ? '👁️' : '👁️‍🗨️'}
               </button>
             </div>
+            <FieldError {...v.errorProps('newPassword')} />
           </div>
 
           {/* Confirm Password */}
@@ -265,10 +252,11 @@ const ResetPassword: React.FC = () => {
             <div className={styles.passwordInputContainer}>
               <input
                 type={showConfirmPassword ? "text" : "password"}
-                id="confirmPassword"
+                {...v.field('confirmPassword')}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className={styles.input}
+                className={`${styles.input} ${v.invalid('confirmPassword')}`}
+                autoComplete="new-password"
                 placeholder="Confirm new password"
                 required
                 disabled={loading}
@@ -282,6 +270,7 @@ const ResetPassword: React.FC = () => {
                 {showConfirmPassword ? '👁️' : '👁️‍🗨️'}
               </button>
             </div>
+            <FieldError {...v.errorProps('confirmPassword')} />
           </div>
 
           <button 

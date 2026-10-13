@@ -57,5 +57,24 @@ services:
     ports:
       - "${FRONTEND_PORT:-8080}:80"
 
+  # ── pgAdmin web UI for the database ────────────────────────────────────────
+  pgadmin:
+    image: dpage/pgadmin4:8.14
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@admin.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+      PGADMIN_CONFIG_UPGRADE_CHECK_ENABLED: "False"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      # Pre-registers the "db" server (loaded on pgAdmin's first start only)
+      - ./db/pgadmin/servers.json:/pgadmin4/servers.json:ro
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+
 volumes:
   db_data:
+  pgadmin_data:

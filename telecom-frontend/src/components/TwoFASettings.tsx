@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import styles from './TwoFASettings.module.css';
+import FieldError from './FieldError';
+import { revealField, shake } from '../utils/validation';
 
 const TwoFASettings: React.FC = () => {
   const [is2FAEnabled, setIs2FAEnabled] = useState<boolean>(false);
@@ -9,6 +11,8 @@ const TwoFASettings: React.FC = () => {
   const [otp, setOtp] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [error, setError] = useState<string>('');
+  const [otpFieldError, setOtpFieldError] = useState<string>('');
+  const [passwordFieldError, setPasswordFieldError] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [timer, setTimer] = useState<number>(60);
@@ -56,14 +60,21 @@ const TwoFASettings: React.FC = () => {
   };
 
   // Verify OTP and enable 2FA
-  const handleVerifyOTP = async () => {
+  const handleVerifyOTP = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    setError('');
     if (otp.length !== 6) {
-      setError('Please enter 6-digit OTP');
+      setOtpFieldError(
+        otp.length === 0
+          ? 'Enter the 6-digit code sent to your email'
+          : `The code must have 6 digits (${otp.length}/6 typed)`
+      );
+      revealField(document.getElementById('twofa-otp'));
       return;
     }
 
     setLoading(true);
-    setError('');
+    setOtpFieldError('');
 
     try {
       const response = await verifyOtp(user?.email || '', otp, '2fa-enable');
@@ -77,10 +88,12 @@ const TwoFASettings: React.FC = () => {
         setShowOTPModal(false);
         setOtp('');
       } else {
-        setError('Invalid OTP');
+        setOtpFieldError('This code is not valid. Check your email and try again.');
+        shake(document.getElementById('twofa-otp'));
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to verify OTP');
+      setOtpFieldError(err.response?.data?.message || 'This code is not valid. Check your email and try again.');
+      shake(document.getElementById('twofa-otp'));
     } finally {
       setLoading(false);
     }
@@ -91,14 +104,17 @@ const TwoFASettings: React.FC = () => {
     setShowPasswordModal(true);
   };
 
-  const handleConfirmDisable = async () => {
+  const handleConfirmDisable = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    setError('');
     if (!password) {
-      setError('Password is required');
+      setPasswordFieldError('Enter your password to confirm');
+      revealField(document.getElementById('twofa-password'));
       return;
     }
 
     setLoading(true);
-    setError('');
+    setPasswordFieldError('');
 
     try {
       await toggle2FA(false, password);
@@ -108,7 +124,8 @@ const TwoFASettings: React.FC = () => {
       setShowPasswordModal(false);
       setPassword('');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to disable 2FA');
+      setPasswordFieldError(err.response?.data?.message || 'Failed to disable 2FA');
+      revealField(document.getElementById('twofa-password'));
     } finally {
       setLoading(false);
     }
@@ -157,55 +174,69 @@ const TwoFASettings: React.FC = () => {
         {error && <div className={styles.error}>{error}</div>}
         {success && <div className={styles.success}>{success}</div>}
 
-        <div className={styles.otpContainer}>
-          <input
-            type="text"
-            maxLength={6}
-            value={otp}
-            onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ''))}
-            placeholder="Enter 6-digit code"
-            className={styles.otpInput}
-            disabled={loading}
-            autoFocus
-          />
-        </div>
+        <form onSubmit={handleVerifyOTP} noValidate>
+          <div className={styles.otpContainer}>
+            <input
+              id="twofa-otp"
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={6}
+              value={otp}
+              onChange={(e) => {
+                setOtp(e.target.value.replace(/[^0-9]/g, ''));
+                setOtpFieldError('');
+              }}
+              placeholder="Enter 6-digit code"
+              className={`${styles.otpInput} ${otpFieldError ? 'field-invalid' : ''}`}
+              aria-invalid={!!otpFieldError}
+              aria-describedby={otpFieldError ? 'twofa-otp-error' : undefined}
+              disabled={loading}
+              autoFocus
+            />
+            <FieldError id="twofa-otp-error" message={otpFieldError} />
+          </div>
 
-        <div className={styles.timer}>
-          {timer > 0 ? (
-            <span>Code expires in: <strong>{timer}s</strong></span>
-          ) : (
-            <span className={styles.expired}>Code expired</span>
-          )}
-        </div>
+          <div className={styles.timer}>
+            {timer > 0 ? (
+              <span>Code expires in: <strong>{timer}s</strong></span>
+            ) : (
+              <span className={styles.expired}>Code expired</span>
+            )}
+          </div>
 
-        <div className={styles.modalActions}>
-          <button
-            onClick={handleVerifyOTP}
-            disabled={loading || otp.length !== 6}
-            className={styles.verifyButton}
-          >
-            {loading ? 'Verifying...' : 'Verify & Enable'}
-          </button>
-          
-          <button
-            onClick={handleResendOTP}
-            disabled={loading || resendCooldown > 0}
-            className={styles.resendButton}
-          >
-            Resend OTP {resendCooldown > 0 ? `(${resendCooldown}s)` : ''}
-          </button>
+          <div className={styles.modalActions}>
+            <button
+              type="submit"
+              disabled={loading}
+              className={styles.verifyButton}
+            >
+              {loading ? 'Verifying...' : 'Verify & Enable'}
+            </button>
 
-          <button
-            onClick={() => {
-              setShowOTPModal(false);
-              setOtp('');
-              setError('');
-            }}
-            className={styles.cancelButton}
-          >
-            Cancel
-          </button>
-        </div>
+            <button
+              type="button"
+              onClick={handleResendOTP}
+              disabled={loading || resendCooldown > 0}
+              className={styles.resendButton}
+            >
+              Resend OTP {resendCooldown > 0 ? `(${resendCooldown}s)` : ''}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setShowOTPModal(false);
+                setOtp('');
+                setError('');
+                setOtpFieldError('');
+              }}
+              className={styles.cancelButton}
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
@@ -221,36 +252,48 @@ const TwoFASettings: React.FC = () => {
 
         {error && <div className={styles.error}>{error}</div>}
 
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Enter your password"
-          className={styles.passwordInput}
-          disabled={loading}
-          autoFocus
-        />
-
-        <div className={styles.modalActions}>
-          <button
-            onClick={handleConfirmDisable}
-            disabled={loading || !password}
-            className={styles.disableButton}
-          >
-            {loading ? 'Disabling...' : 'Disable 2FA'}
-          </button>
-
-          <button
-            onClick={() => {
-              setShowPasswordModal(false);
-              setPassword('');
-              setError('');
+        <form onSubmit={handleConfirmDisable} noValidate>
+          <input
+            id="twofa-password"
+            type="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              setPasswordFieldError('');
             }}
-            className={styles.cancelButton}
-          >
-            Cancel
-          </button>
-        </div>
+            placeholder="Enter your password"
+            className={`${styles.passwordInput} ${passwordFieldError ? 'field-invalid' : ''}`}
+            aria-invalid={!!passwordFieldError}
+            aria-describedby={passwordFieldError ? 'twofa-password-error' : undefined}
+            disabled={loading}
+            autoFocus
+          />
+          <FieldError id="twofa-password-error" message={passwordFieldError} />
+
+          <div className={styles.modalActions}>
+            <button
+              type="submit"
+              disabled={loading}
+              className={styles.disableButton}
+            >
+              {loading ? 'Disabling...' : 'Disable 2FA'}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setShowPasswordModal(false);
+                setPassword('');
+                setError('');
+                setPasswordFieldError('');
+              }}
+              className={styles.cancelButton}
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

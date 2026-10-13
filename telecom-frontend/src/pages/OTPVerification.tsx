@@ -1,10 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import styles from './OTPVerification.module.css';
+import FieldError from '../components/FieldError';
+import { revealField, shake } from '../utils/validation';
+
+const OTP_LENGTH = 6;
+const EMPTY_OTP: string[] = Array(OTP_LENGTH).fill('');
 
 const OTPVerification: React.FC = () => {
-  const [otp, setOtp] = useState<string>('');
+  // one entry per box, so an empty box in the middle stays empty
+  const [digits, setDigits] = useState<string[]>(EMPTY_OTP);
+  const [otpError, setOtpError] = useState<string>('');
+  const otpBoxesRef = useRef<HTMLDivElement>(null);
+  const otp = digits.join('');
   const [email, setEmail] = useState<string>('');
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
@@ -66,23 +75,43 @@ const OTPVerification: React.FC = () => {
     };
   }, [timer]);
 
+  const focusBox = (index: number) => document.getElementById(`otp-${index}`)?.focus();
+
+  const clearOtp = () => {
+    setDigits(EMPTY_OTP);
+    focusBox(0);
+  };
+
   // Handle OTP input changes (auto-advance)
   const handleOtpChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
     const value = e.target.value;
-    
+
     // Allow only numbers
-    if (!/^\d*$/.test(value)) return;
-    
-    // Update OTP string
-    const otpArray = otp.split('');
-    otpArray[index] = value;
-    const newOtp = otpArray.join('').slice(0, 6);
-    setOtp(newOtp);
-    
+    if (!/^\d*$/.test(value)) {
+      setOtpError('The code contains digits only');
+      shake(e.target);
+      return;
+    }
+
+    setOtpError('');
+    setDigits(prev => prev.map((d, i) => (i === index ? value.slice(-1) : d)));
+
     // Auto-focus next input
-    if (value && index < 5) {
-      const nextInput = document.getElementById(`otp-${index + 1}`);
-      if (nextInput) nextInput.focus();
+    if (value && index < OTP_LENGTH - 1) focusBox(index + 1);
+  };
+
+  // Backspace on an empty box goes back; arrows move between boxes
+  const handleOtpKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number) => {
+    if (e.key === 'Backspace' && !digits[index] && index > 0) {
+      e.preventDefault();
+      setDigits(prev => prev.map((d, i) => (i === index - 1 ? '' : d)));
+      focusBox(index - 1);
+    } else if (e.key === 'ArrowLeft' && index > 0) {
+      e.preventDefault();
+      focusBox(index - 1);
+    } else if (e.key === 'ArrowRight' && index < OTP_LENGTH - 1) {
+      e.preventDefault();
+      focusBox(index + 1);
     }
   };
 
@@ -91,8 +120,16 @@ const OTPVerification: React.FC = () => {
     setError('');
     setSuccess('');
     
-    if (otp.length !== 6) {
-      setError('Please enter the 6-digit OTP');
+    const firstEmpty = digits.findIndex(d => !d);
+    if (firstEmpty !== -1) {
+      const missing = digits.filter(d => !d).length;
+      setOtpError(
+        missing === OTP_LENGTH
+          ? 'Enter the 6-digit code we sent to your email'
+          : `The code is incomplete: ${missing} digit${missing > 1 ? 's' : ''} missing`
+      );
+      revealField(document.getElementById(`otp-${firstEmpty}`));
+      shake(otpBoxesRef.current);
       return;
     }
     
@@ -113,22 +150,23 @@ const OTPVerification: React.FC = () => {
         setSuccess('OTP verified successfully! Redirecting...');
         
         // Clear OTP from state
-        setOtp('');
+        setDigits(EMPTY_OTP);
         
         setTimeout(() => {
           navigate('/dashboard');
         }, 1500);
       } else {
         setError(response.message || 'Invalid OTP');
-        // Clear OTP input on error
-        setOtp('');
-        // Focus first input
-        document.getElementById('otp-0')?.focus();
+        setOtpError('This code is not valid. Please type it again.');
+        shake(otpBoxesRef.current);
+        clearOtp();
       }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to verify OTP');
-      setOtp('');
-    } finally {
+      setOtpError('This code is not valid. Please type it again.');
+      shake(otpBoxesRef.current);
+      clearOtp();
+    }finally {
       setLoading(false);
     }
   };
@@ -154,11 +192,9 @@ const OTPVerification: React.FC = () => {
         setSuccess('New OTP sent to your email');
         setResendCooldown(60);
         setTimer(60);
-        setOtp('');
-        
-        // Focus first input
-        document.getElementById('otp-0')?.focus();
-        
+        setOtpError('');
+        clearOtp();
+
         // Start cooldown timer
         const cooldownInterval = setInterval(() => {
           setResendCooldown(prev => {
@@ -189,13 +225,13 @@ const OTPVerification: React.FC = () => {
   const handlePaste = (e: React.ClipboardEvent) => {
     e.preventDefault();
     const pastedData = e.clipboardData.getData('text');
-    const numbers = pastedData.replace(/[^0-9]/g, '').slice(0, 6);
-    
+    const numbers = pastedData.replace(/[^0-9]/g, '').slice(0, OTP_LENGTH);
+
     if (numbers.length > 0) {
-      setOtp(numbers);
-      // Focus last filled input
-      const index = Math.min(numbers.length - 1, 5);
-      document.getElementById(`otp-${index}`)?.focus();
+      setOtpError('');
+      setDigits(EMPTY_OTP.map((_, i) => numbers[i] ?? ''));
+      // Focus the next empty box, or the last one when the code is complete
+      focusBox(Math.min(numbers.length, OTP_LENGTH - 1));
     }
   };
 
@@ -224,23 +260,31 @@ const OTPVerification: React.FC = () => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className={styles.form}>
-          <div className={styles.otpContainer} onPaste={handlePaste}>
-            {[0, 1, 2, 3, 4, 5].map((index) => (
+        <form onSubmit={handleSubmit} className={styles.form} noValidate>
+          <div className={styles.otpContainer} onPaste={handlePaste} ref={otpBoxesRef}>
+            {digits.map((digit, index) => (
               <input
                 key={index}
                 id={`otp-${index}`}
                 type="text"
                 inputMode="numeric"
                 maxLength={1}
-                value={otp[index] || ''}
+                value={digit}
                 onChange={(e) => handleOtpChange(e, index)}
-                className={styles.otpInput}
+                onKeyDown={(e) => handleOtpKeyDown(e, index)}
+                onFocus={(e) => e.target.select()}
+                className={`${styles.otpInput} ${otpError && !digit ? 'field-invalid' : ''}`}
+                aria-label={`Digit ${index + 1} of ${OTP_LENGTH}`}
+                aria-invalid={!!otpError && !digit}
+                aria-describedby={otpError ? 'otp-error' : undefined}
                 disabled={loading}
                 autoFocus={index === 0}
-                autoComplete="off"
+                autoComplete={index === 0 ? 'one-time-code' : 'off'}
               />
             ))}
+          </div>
+          <div className={styles.otpErrorRow}>
+            <FieldError id="otp-error" message={otpError} />
           </div>
 
           <div className={styles.timer}>
@@ -257,7 +301,7 @@ const OTPVerification: React.FC = () => {
             <button
               type="submit"
               className={styles.verifyButton}
-              disabled={loading || otp.length !== 6}
+              disabled={loading}
             >
               {loading ? 'Verifying...' : 'Verify OTP'}
             </button>
